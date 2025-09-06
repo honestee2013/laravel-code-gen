@@ -1,0 +1,18 @@
+<x-core.views::layouts.app>
+    {{-- Sidebar slot --}}
+    {{sidebar}}
+
+    {{-- Header slot --}}
+    {{header}}
+
+    {{-- Tab bar links --}}
+    {{tabBarLinks}}
+
+    {{-- Main content: Livewire component --}}
+    <div class="container-fluid mt-4">
+        {{livewireComponent}}
+    </div>
+
+    {{-- Footer slot --}}
+    {{footer}}
+</x-core.views::layouts.app>

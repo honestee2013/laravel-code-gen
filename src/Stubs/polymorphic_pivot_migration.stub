@@ -1,0 +1,26 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up()
+    {
+        Schema::create('{{pivotTableName}}', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('{{foreignKey}}')->constrained('{{strtolower(str_plural( $modelName ))}}')->onDelete('cascade');
+            $table->unsignedBigInteger('{{relatedPivotKey}}');
+            $table->string('{{morphType}}');
+            $table->timestamps();
+
+            $table->index(['{{relatedPivotKey}}', '{{morphType}}']); // Important for polymorphic queries
+        });
+    }
+
+    public function down()
+    {
+        Schema::dropIfExists('{{pivotTableName}}');
+    }
+};

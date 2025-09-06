@@ -1,0 +1,24 @@
+{
+    "name": "quicker-faster/laravel-code-gen",
+    "description": "A reusable package for your Laravel project to generate a website CRUD operations and other code using various options about the technology and themes  e.g Livewire and Creative Tim's bootstarp soft-ui theme.",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "QuickerFaster\\CodeGen\\": "src/"
+        }
+    },
+    "require": {
+
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+
+    "extra": {
+    "laravel": {
+        "providers": [
+            "QuickerFaster\\CodeGen\\Providers\\QuickerFasterCodeGenServiceProvider"
+        ]
+    }
+}
+}

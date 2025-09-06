@@ -1,0 +1,99 @@
+<?php
+
+namespace App\Modules\{{module}}\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
+{{imports}}
+{{traitImports}}
+
+class {{modelName}} extends Model
+{
+    use HasFactory;
+    {{traitUses}}
+    {{softDeletes}}
+
+    {{displayFields}}
+
+    {{tableName}}
+    {{primaryKey}}
+    {{incrementing}}
+    {{keyType}}
+    {{timestamps}}
+    {{dateFormat}}
+
+    protected $fillable = [
+        {{fillable}}
+    ];
+
+    protected $guarded = [
+        {{guarded}}
+    ];
+
+    protected $casts = [
+        {{casts}}
+    ];
+
+    protected $dispatchesEvents = [
+        {{events}}
+    ];
+
+    /**
+     * Validation rules for the model.
+     */
+    protected static $rules = [
+        {{rules}}
+    ];
+
+    /**
+     * Custom validation messages.
+     */
+    protected static $messages = [
+        {{messages}}
+    ];
+
+    /**
+     * Boot the model.
+     */
+    protected static function boot()
+    {
+        parent::boot();
+        {{bootMethods}}
+    }
+
+    /**
+     * Validate the model instance.
+     */
+    public function validate()
+    {
+        $validator = Validator::make($this->attributesToArray(), static::$rules, static::$messages);
+        
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+        
+        return true;
+    }
+
+    /**
+     * Save the model to the database with validation.
+     */
+    public function save(array $options = [])
+    {
+        $this->validate();
+        return parent::save($options);
+    }
+
+    {{relations}}
+
+    /**
+     * Create a new factory instance for the model.
+     */
+    protected static function newFactory()
+    {
+        return \App\Modules\{{module}}\Database\Factories\{{modelName}}Factory::new();
+    }
+}
