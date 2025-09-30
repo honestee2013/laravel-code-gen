@@ -3,33 +3,17 @@
 namespace QuickerFaster\CodeGen\Services\Commands;
 
 use Exception;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
-use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 
-class SidebarLinksGenerator extends Command
+class SidebarLinksGenerator extends BaseLinksGenerator
 {
-
-
-    public function __construct($command = null)
-    {
-        $this->command = $command;
-        parent::__construct();
-        if ($command) {
-            $this->setLaravel($command->getLaravel());
-            $this->output = $command->getOutput();
-        }
-    }
-
-
     /**
      * Generate sidebar links from the given schema data.
      *
      * @param string $module
      * @param string $modelName
      * @param array $modelData
-     * @param Command $command
      * @return void
      * @throws Exception
      */
@@ -38,16 +22,20 @@ class SidebarLinksGenerator extends Command
         $sidebar = $modelData['sidebar'] ?? [];
 
         // Check if sidebar should be added
-        if (isset($sidebar['add']) && !$sidebar['add']) {
+        /*if (isset($sidebar['add']) && !$sidebar['add']) {
             return;
-        }
+        }*/
+
+        /*$context = $sidebar['context']?? '';
+        $context = $context? $context."_": '';*/
+        $fileName = "sidebar_menu.php";
 
         try {
-            $sidebarConfigPath = base_path("app/Modules/{$module}/Config/sidebar_menu.php");
+            $sidebarConfigPath = base_path("app/Modules/{$module}/Config/$fileName");
             $newEntry = $this->getSidebarEntryArray($module, $modelName, $modelData);
             
             // Read existing configuration
-            $existing = $this->readSidebarConfig($sidebarConfigPath);
+            $existing = $this->readConfig($sidebarConfigPath);
             
             // Check for duplicates
             if ($this->isDuplicateEntry($existing, $newEntry)) {
@@ -64,7 +52,7 @@ class SidebarLinksGenerator extends Command
             $existing[] = $newEntry;
             
             // Write the updated configuration
-            $this->writeSidebarConfig($sidebarConfigPath, $existing);
+            $this->writeConfig($sidebarConfigPath, $existing);
             
             $this->command->info("Sidebar menu updated: {$sidebarConfigPath}");
             
@@ -75,37 +63,6 @@ class SidebarLinksGenerator extends Command
             $this->command->error("Failed to generate sidebar links: {$e->getMessage()}");
             throw $e;
         }
-    }
-
-    /**
-     * Read the sidebar configuration from a file.
-     *
-     * @param string $configPath
-     * @return array
-     */
-    protected function readSidebarConfig($configPath)
-    {
-        if (File::exists($configPath)) {
-            return include $configPath;
-        }
-        
-        return [];
-    }
-
-    /**
-     * Check if an entry already exists in the sidebar configuration.
-     *
-     * @param array $existingConfig
-     * @param array $newEntry
-     * @return bool
-     */
-    protected function isDuplicateEntry($existingConfig, $newEntry)
-    {
-        return collect($existingConfig)->contains(function ($entry) use ($newEntry) {
-            return ($entry['title'] === $newEntry['title'] && $entry['url'] === $newEntry['url']) ||
-                   (isset($entry['groupTitle']) && isset($newEntry['groupTitle']) && 
-                    $entry['groupTitle'] === $newEntry['groupTitle']);
-        });
     }
 
     /**
@@ -133,61 +90,6 @@ class SidebarLinksGenerator extends Command
         }
         
         return $existingConfig;
-    }
-
-    /**
-     * Write the sidebar configuration to a file.
-     *
-     * @param string $configPath
-     * @param array $config
-     * @return void
-     */
-    protected function writeSidebarConfig($configPath, $config)
-    {
-        File::ensureDirectoryExists(dirname($configPath));
-        
-        $content = "<?php\n\nreturn [\n";
-        
-        foreach ($config as $item) {
-            $content .= "    " . $this->arrayToPhpString($item) . ",\n";
-        }
-        
-        $content .= "];\n";
-        
-        File::put($configPath, $content);
-    }
-
-    /**
-     * Convert an array to a formatted PHP string.
-     *
-     * @param array $array
-     * @param int $indentLevel
-     * @return string
-     */
-    protected function arrayToPhpString($array, $indentLevel = 1)
-    {
-        $indent = str_repeat('    ', $indentLevel);
-        $lines = [];
-        
-        $lines[] = '[';
-        
-        foreach ($array as $key => $value) {
-            if (is_array($value)) {
-                $lines[] = "{$indent}'{$key}' => " . $this->arrayToPhpString($value, $indentLevel + 1) . ",";
-            } elseif (is_bool($value)) {
-                $lines[] = "{$indent}'{$key}' => " . ($value ? 'true' : 'false') . ",";
-            } elseif (is_numeric($value)) {
-                $lines[] = "{$indent}'{$key}' => {$value},";
-            } elseif (is_null($value)) {
-                $lines[] = "{$indent}'{$key}' => null,";
-            } else {
-                $lines[] = "{$indent}'{$key}' => '{$value}',";
-            }
-        }
-        
-        $lines[] = str_repeat('    ', $indentLevel - 1) . ']';
-        
-        return implode("\n", $lines);
     }
 
     /**
@@ -252,7 +154,6 @@ class SidebarLinksGenerator extends Command
      * @param string $module
      * @param string $modelName
      * @param array $modelData
-     * @param Command $command
      * @return void
      */
     protected function generateBladeComponent($module, $modelName, $modelData)
@@ -260,11 +161,15 @@ class SidebarLinksGenerator extends Command
         $sidebar = $modelData['sidebar'] ?? [];
         
         // Only generate Blade component if explicitly requested
-        if (!($sidebar['generateBlade'] ?? false)) {
+        /*if (!($sidebar['generateBlade'] ?? false)) {
             return;
-        }
+        }*//////////
         
-        $bladePath = app_path("Modules/{$module}/Resources/views/components/layouts/navbars/auth/sidebar-links.blade.php");
+        $context = strtolower($sidebar['context'])?? ''; // make context folder lowercase
+        $context = $context? $context."/": '';
+        $fileName = $context."sidebar-links.blade.php";
+
+        $bladePath = app_path("Modules/{$module}/Resources/views/components/layouts/navbars/auth/$fileName");
         
         if (!File::exists(dirname($bladePath))) {
             File::makeDirectory(dirname($bladePath), 0755, true);
@@ -311,6 +216,18 @@ class SidebarLinksGenerator extends Command
         $permission = $sidebar['permission'] ?? 'view_' . Str::snake($modelName);
         
         return <<<BLADE
+<li class="nav-item text-nowrap">
+    <a href="/{$module}/{$url}" class="nav-link d-flex align-items-center" data-bs-toggle="tooltip" wire:ignore.self
+        data-bs-placement="right" title="{$title}">
+        <i class="{$iconClasses} me-2"></i>
+        @if (\$state === 'full')
+            <span>{$title}</span>
+        @endif
+    </a>
+</li>
+BLADE;
+
+        /*return <<<BLADE
 @if(auth()->user()?->can('{$permission}'))
     <x-core.views::layouts.navbars.sidebar-link-item
         iconClasses="{$iconClasses} sidebar-icon"
@@ -318,6 +235,6 @@ class SidebarLinksGenerator extends Command
         title="{$title}"
     />
 @endif
-BLADE;
+BLADE;*////////
     }
 }

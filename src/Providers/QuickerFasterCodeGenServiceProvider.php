@@ -51,7 +51,8 @@ class QuickerFasterCodeGenServiceProvider extends ServiceProvider
 
     public function register()
     {
-        $this->app->singleton('user-activity-logger', function () {
+        ///// To be move to the ui package
+        /*$this->app->singleton('user-activity-logger', function () {
             return new UserActivityLogger();
         });
 
@@ -64,7 +65,7 @@ class QuickerFasterCodeGenServiceProvider extends ServiceProvider
             return new DataTableOptionService();
         });
 
-        $this->app->singleton("DataTableDataSourceService", fn() => new DataTableDataSourceService);
+        $this->app->singleton("DataTableDataSourceService", fn() => new DataTableDataSourceService);*/
 
 
         // Register commands
@@ -98,13 +99,14 @@ class QuickerFasterCodeGenServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        /*
         
+        ///// To be move to the ui package
+
         // Example: Loading routes
-        $this->loadRoutesFrom(__DIR__.'/../routes/web.php');
+        ///$this->loadRoutesFrom(__DIR__.'/../routes/web.php');
 
         // Example: Loading migrations
-        $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
+        /*$this->loadMigrationsFrom(__DIR__.'/../database/migrations');
 
         // Publishing common configuration
         $this->publishes([
@@ -135,10 +137,11 @@ class QuickerFasterCodeGenServiceProvider extends ServiceProvider
         $this->publishes([
             __DIR__.'/../app-integration/Models' => app_path('Models/CodeGen'),
             __DIR__.'/../app-integration/Controllers' => app_path('Http/Controllers/CodeGen'),
-        ], 'code-gen-app-integration');
+        ], 'code-gen-app-integration');*/
         
-*/
 
+
+        ///// To be move to the ui package
 
         /*$this->registerLivewireComponents($livewirePath = __DIR__ .'/../Http/Livewire');
 

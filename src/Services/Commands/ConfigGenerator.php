@@ -145,7 +145,7 @@ class ConfigGenerator extends Command
                 $fieldDefinitions = array_merge($fieldDefinitions, $partialDefinitions);
             } else {
                 // Handle regular field definition
-                $fieldDefinitions[$fieldName] = $this->buildFieldDefinition($fieldName, $field, $relations);
+                $fieldDefinitions[$fieldName] = $this->buildFieldDefinition($modelData, $fieldName, $field, $relations);
             }
         }
         
@@ -188,7 +188,7 @@ class ConfigGenerator extends Command
      * @param array $relations
      * @return array
      */
-    protected function buildFieldDefinition($fieldName, $field, $relations)
+    protected function buildFieldDefinition($modelData, $fieldName, $field, $relations)
     {
         $definition = [
             'display' => $field['display'] ?? 'inline',
@@ -199,6 +199,10 @@ class ConfigGenerator extends Command
         // Add validation if present
         if (isset($field['validation'])) {
             $definition['validation'] = implode('|', $field['validation']);
+
+        // If field_type is file 
+        } else {
+            $this->handleFileFieldType($modelData, $definition, $fieldName);
         }
         
         // Add options if present
@@ -233,6 +237,56 @@ class ConfigGenerator extends Command
         return $definition;
     }
 
+
+    protected function handleFileFieldType($modelData, &$definition, $fieldName) {
+        $allowedDocumentTypes = ['pdf', 'doc', 'docx'];//, 'xls', 'xlsx', 'ppt', 'pptx', 'txt'];
+        $allowedImageTypes = ['jpg', 'jpeg', 'png', 'bmp'];// 'gif', 'svg'];
+        $allowedFileTypes = array_merge($allowedDocumentTypes, $allowedImageTypes);
+        $allowedFileSize = $modelData['fields'][$fieldName]['maxSizeMB'] ?? 1; // default to 1MB if not specified
+
+
+        $definition['maxSizeMB'] = $allowedFileSize;
+        $allowedFileSize = $allowedFileSize * 1024; // convert to KB
+
+
+        if (($modelData['fields'][$fieldName]['type'] ?? '') === 'file') {
+            // Add default file-specific settings
+            if (isset($modelData['fields'][$fieldName]['fileTypes']) && $modelData['fields'][$fieldName]['fileTypes'] === 'document') {
+                $definition['fileTypes'] = $allowedDocumentTypes;
+                $definition['validation'] = 'mimes:' . implode(',', $allowedDocumentTypes) . '|max:' . $allowedFileSize;
+
+            } else if (isset($modelData['fields'][$fieldName]['fileTypes']) && $modelData['fields'][$fieldName]['fileTypes'] === 'image') {
+                $definition['fileTypes'] = $allowedImageTypes;
+                $definition['validation'] = 'mimes:' . implode(',', $allowedImageTypes) . '|max:' . $allowedFileSize;
+
+            } else if (isset($modelData['fields'][$fieldName]['fileTypes']) ) {
+                if (is_array($modelData['fields'][$fieldName]['fileTypes'])) {
+                    $definition['validation'] = 'mimes:' . implode(',', $modelData['fields'][$fieldName]['fileTypes']) . '|max:' . $allowedFileSize;
+                    $definition['fileTypes'] = $modelData['fields'][$fieldName]['fileTypes'];
+                } else {
+                    // Assume it's a comma-separated string & remove spaces
+                    $mimes = str_replace(' ', '', $modelData['fields'][$fieldName]['fileTypes']);
+                    $definition['validation'] = 'mimes:' . $mimes . '|max:' . $allowedFileSize;
+                    $definition['fileTypes'] = array_map('trim', explode(',', $modelData['fields'][$fieldName]['fileTypes']));
+                }
+            } else {
+                // Default to allowing all file types with a size limit
+                $definition['fileTypes'] = $allowedFileTypes;
+                $definition['validation'] = 'mimes:' . implode(',', $allowedFileTypes) . '|max:' . $allowedFileSize;
+            }
+
+
+        }
+
+        // Add size definition if specified
+        $definition['maxSizeMB'] = $modelData['fields'][$fieldName]['maxSizeMB'] ?? $allowedFileSize / 1024; // default to 2MB if not specified
+
+
+    }
+
+
+
+
     /**
      * Get the proper field type for the config.
      *
@@ -247,7 +301,6 @@ class ConfigGenerator extends Command
             'float' => 'number',
             'int' => 'number',
             'integer' => 'number',
-            'textarea' => 'text',
             'timepicker' => 'timepicker',
             'datepicker' => 'datepicker',//'date',
             'datetimepicker' => 'datetimepicker',//'datetime-local',

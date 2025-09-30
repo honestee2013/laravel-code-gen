@@ -13,6 +13,8 @@ use QuickerFaster\CodeGen\Services\Commands\ModelGenerator;
 use QuickerFaster\CodeGen\Services\Commands\ConfigGenerator;
 use QuickerFaster\CodeGen\Services\Commands\MigrationGenerator;
 use QuickerFaster\CodeGen\Services\Commands\SidebarLinksGenerator;
+use QuickerFaster\CodeGen\Services\Commands\TopBarLinksGenerator;
+use QuickerFaster\CodeGen\Services\Commands\BottomBarLinksGenerator;
 
 
 class GenerateFromSchema extends Command
@@ -39,6 +41,8 @@ class GenerateFromSchema extends Command
             (new ConfigGenerator($this))->generateConfigFile($module, $modelName, $modelData); // New: Generate config file
             (new BladeGenerator($this))->generateBladeFile($module, $modelName, $modelData); // We'll add this later
             (new SidebarLinksGenerator($this))->generateSidebarLinks($module, $modelName, $modelData); // Generate sidebar links
+            (new TopBarLinksGenerator($this))->generateTopBarLinks($module, $modelName, $modelData); // Generate sidebar links
+            (new BottomBarLinksGenerator($this))->generateBottomBarLinks($module, $modelName, $modelData); // Generate bottom bar links
         }
 
         $this->info('Files generated successfully!');

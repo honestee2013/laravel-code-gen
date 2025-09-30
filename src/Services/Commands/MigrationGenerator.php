@@ -360,6 +360,7 @@ class MigrationGenerator extends Command
             case 'datetime':
             case 'timestamp':
                 return 'datetime';
+            case 'timepicker':
             case 'time':
                 return 'time';
             default:

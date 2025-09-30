@@ -1,0 +1,14 @@
+
+
+<x-qf::livewire.bootstrap.layouts.app>
+    {{topNav}}
+
+    {{sidebar}}
+    
+    {{bottomBar}}
+
+   
+    {{livewireComponent}}
+</x-qf::livewire.bootstrap.layouts.app>
+
+

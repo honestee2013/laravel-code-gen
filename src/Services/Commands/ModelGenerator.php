@@ -234,6 +234,12 @@ class ModelGenerator extends Command
         $fields = $modelData['fields'] ?? [];
         
         foreach ($fields as $fieldName => $fieldData) {
+            // If field is in the noCasts list, skip it
+            $noCasts = $modelData['noCasts'] ?? [];
+            if (in_array($fieldName, $noCasts)) {
+                continue;
+            }
+
             $type = $fieldData['type'] ?? 'string';
             
             // Map YAML types to Laravel cast types

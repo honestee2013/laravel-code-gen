@@ -115,33 +115,24 @@ class BladeGenerator extends Command
      */
     protected function getBladeStub($module, $modelName, $modelData, $activeTab = null)
     {
-        $stubPath = __DIR__ . '/../../Stubs/new-view.blade.stub';
+        $stubPath = __DIR__ . '/../../Stubs/view.blade.stub';
         
         if (!File::exists($stubPath)) {
-            throw new Exception("Blade new stub view not found: {$stubPath}");
+            throw new Exception("Blade stub not found: {$stubPath}");
         }
         
         $stub = File::get($stubPath);
         
         // Prepare all replacements
         $replacements = [
-
-            ////// New view layout essentials /////
-            '{{sidebar}}' => $this->getSidebar($module, $modelData),
-            '{{topNav}}' => $this->getTopNav($module, $modelData),
-            '{{bottomBar}}' => $this->getBottomBar($module, $modelData),
-            '{{pageContext}}' => ucfirst($this->getPageContext($modelName, $modelData)),
-            '{{livewireComponent}}' => $this->getLivewireComponent($module, $modelName, $modelData),
-
-
-            // These may not be needed anymore
             '{{pageTitle}}' => $this->getPageTitle($modelName, $modelData),
             '{{hiddenFields}}' => $this->getHiddenFields($modelData),
             '{{queryFilters}}' => $this->getQueryFilters($modelData),
             '{{tabBarLinks}}' => $this->getTabBarLinks($module, $modelData),
+            '{{livewireComponent}}' => $this->getLivewireComponent($module, $modelName, $modelData),
             '{{header}}' => $this->getHeader($module, $modelData),
+            '{{sidebar}}' => $this->getSidebar($module, $modelData),
             '{{footer}}' => $this->getFooter($module, $modelData),
-            
             '{{module}}' => strtolower($module),
             '{{modelName}}' => $modelName,
         ];
@@ -157,43 +148,6 @@ class BladeGenerator extends Command
      * @return string
      */
     protected function getPageTitle($modelName, $modelData)
-    {   
-        $pageTitle = $modelData['pageTitle'] ?? null;
-        if ($pageTitle) {
-            return $pageTitle;
-        }
-        return Str::plural(Str::title(str_replace('_', ' ', Str::snake($modelName))));// . " Management";
-    }
-
-
-
-        /**
-     * Get the page title.
-     *
-     * @param string $modelName
-     * @param array $modelData
-     * @return string
-     */
-    protected function getPageContext($modelName, $modelData)
-    {   
-        $pageContext = $modelData['context'] ?? null;
-        
-        if ($pageContext) {
-            return $pageContext;
-        }
-        return Str::plural(Str::title(str_replace('_', ' ', Str::snake($modelName))));// . " Management";
-    }
-
-
-
-        /**
-     * Get the page title.
-     *
-     * @param string $modelName
-     * @param array $modelData
-     * @return string
-     */
-    protected function getTabsPageTitle($modelName, $modelData)
     {
         if (isset($modelData['tab'])) {
             return $modelData['tab']['pageTitle'] ?? 
@@ -292,16 +246,15 @@ HTML;
         $hiddenFields = $this->getHiddenFields($modelData);
         $queryFilters = $this->getQueryFilters($modelData);
         
-return 
+        return 
 <<<HTML
-<livewire:qf::data-tables.data-table-manager model="App\\Modules\\{$module}\\Models\\{$modelName}"
+<livewire:data-tables.data-table-manager model="App\\Modules\\{$module}\\Models\\{$modelName}"
             pageTitle="{$pageTitle}"
             queryFilters=[]
             :hiddenFields="{$hiddenFields}"
             :queryFilters="{$queryFilters}"
         />
 HTML;
-       
 
     }
 
@@ -363,87 +316,20 @@ HTML;
      */
     protected function getSidebar($module, $modelData)
     {
-        $includeSidebar = $modelData['includeSidebar'] ?? true; // Include by default
-    
+        $includeSidebar = $modelData['includeSidebar'] ?? true;
+        
         if (!$includeSidebar) {
             return '';
         }
-
         
-        $sidebar = $modelData['sidebar'] ?? [];
-        $context = strtolower($sidebar['context'])?? ''; // make context folder lowercase
-
-
-return <<<HTML
-<x-slot name="sidebar">
-        <livewire:qf::layouts.navs.sidebar context="{$context}"  moduleName="{$module}">
-    </x-slot>
-HTML;
-        
-        /*return 
+        return 
 <<<HTML
 <x-slot name="sidebar">
         <x-core.views::layouts.navbars.auth.sidebar moduleName="{$module}">
         </x-core.views::layouts.navbars.auth.sidebar>
     </x-slot>
-HTML;*/
-    }
-
-
-    /**
-     * Get the bottom bar slot.
-     *
-     * @param string $module
-     * @param array $modelData
-     * @return string
-     */
-    protected function getBottomBar($module, $modelData)
-    {
-        $includeSidebar = $modelData['includeSidebar'] ?? true; // Include by default if sidebar is present
-    
-        if (!$includeSidebar) {
-            return '';
-        }
-
-        $sidebar = $modelData['sidebar'] ?? []; // Bottom bar context should match sidebar context
-        $context = strtolower($sidebar['context'])?? ''; // make context folder lowercase
-
-
-
-
-return <<<HTML
-<x-slot name="bottomBar">
-        <livewire:qf::layouts.navs.bottom-bar context="{$context}" moduleName="{$module}">
-    </x-slot>
 HTML;
     }
-
-
-    /**
-     * Get the top nav slot.
-     *
-     * @param string $module
-     * @param array $modelData
-     * @return string
-     */
-    protected function getTopNav($module, $modelData)
-    {
-        /*$includeSidebar = $modelData['includeSidebar'] ?? true; // Include by default if sidebar is present
-    
-        if (!$includeSidebar) {
-            return '';
-        }*/
-            
-
-            // Always include the top bar
-return  <<<HTML
-<x-slot name="topNav">
-        <livewire:qf::layouts.navs.top-nav moduleName="{$module}">
-    </x-slot>
-HTML;
-    }
-
-
 
     /**
      * Initialize tab parameters with defaults.
