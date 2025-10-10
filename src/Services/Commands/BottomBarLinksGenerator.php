@@ -164,10 +164,10 @@ class BottomBarLinksGenerator extends BaseLinksGenerator
         
 
         return <<<BLADE
-            <a href="{$module}/{$url}" class="btn btn-light flex-shrink-0 text-center" style="min-width:70px;" wire:navigate>
-                <i class="fa {$iconClasses} }} d-block mb-1"></i>
+            <button role="link" href="{$module}/{$url}" class="btn btn-light flex-shrink-0 text-center" style="min-width:70px;" wire:navigate>
+                <i class=" {$iconClasses} }} d-block mb-1"></i>
                 <small>{$title}</small>
-            </a>
+            </button>
 BLADE;
 
         /*return <<<BLADE

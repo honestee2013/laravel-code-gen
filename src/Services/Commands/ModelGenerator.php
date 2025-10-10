@@ -32,6 +32,7 @@ class ModelGenerator extends Command
      */
     public function generateModel($module, $modelName, $modelData)
     {
+        $module = ucfirst($module);
         $modelPath = app_path("Modules/{$module}/Models/{$modelName}.php");
 
         // Create directory if it doesn't exist
@@ -140,7 +141,8 @@ class ModelGenerator extends Command
      */
     protected function getNamespace($module)
     {
-        return "App\\Modules\\" . ucfirst($module) . "\\Models";
+        return "xxxxxxx";
+        ///return "App\\Modules\\" . ucfirst($module) . "\\Models";
     }
 
     /**

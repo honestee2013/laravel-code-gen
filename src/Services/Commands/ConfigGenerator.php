@@ -89,6 +89,8 @@ class ConfigGenerator extends Command
             "controls" => $modelData['controls'] ?? [],
             "fieldGroups" => $modelData['fieldGroups'] ?? [],
             "moreActions" => $modelData['moreActions'] ?? [],
+            "switchViews" => $modelData['switchViews'] ?? [],
+            "relations" => $modelData['relations'] ?? [],
             "report" => $this->buildReportConfig($module, $modelData['report'] ?? []),
         ];
         

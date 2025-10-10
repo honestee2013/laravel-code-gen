@@ -34,6 +34,7 @@ class BladeGenerator extends Command
      */
     public function generateBladeFile($module, $modelName, $modelData)
     {
+        //$module = ucfirst($module);
         try {
             if (isset($modelData['tab'])) {
                 $this->generateTabbedView($module, $modelName, $modelData);
@@ -294,7 +295,7 @@ HTML;
         
 return 
 <<<HTML
-<livewire:qf::data-tables.data-table-manager model="App\\Modules\\{$module}\\Models\\{$modelName}"
+<livewire:qf::data-tables.data-table-manager :selectedItemId="\$id??null" model="App\\Modules\\{$module}\\Models\\{$modelName}"
             pageTitle="{$pageTitle}"
             queryFilters=[]
             :hiddenFields="{$hiddenFields}"
