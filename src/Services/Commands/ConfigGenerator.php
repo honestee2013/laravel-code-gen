@@ -50,7 +50,7 @@ class ConfigGenerator extends Command
         try {
             $configData = $this->buildConfigData($module, $modelName, $modelData);
             $configContent = $this->generateConfigContent($configData);
-            
+
             File::put($configPath, $configContent);
             $this->command->info("Config file created: {$configPath}");
         } catch (Exception $e) {
@@ -71,13 +71,13 @@ class ConfigGenerator extends Command
     protected function buildConfigData($module, $modelName, $modelData)
     {
         $ucModule = ucfirst($module);
-        
+
         // Load included configs
         $includedConfig = $this->loadIncludedConfigs($module, $modelData);
-        
+
         // Build field definitions
         $fieldDefinitions = $this->buildFieldDefinitions($module, $modelName, $modelData);
-        
+
         // Build base config
         $configData = [
             "model" => "App\\Modules\\{$ucModule}\\Models\\{$modelName}",
@@ -93,10 +93,64 @@ class ConfigGenerator extends Command
             "relations" => $modelData['relations'] ?? [],
             "report" => $this->buildReportConfig($module, $modelData['report'] ?? []),
         ];
-        
+
+
+        // Add wizard references for simple cases
+        $wizardReferences = $this->buildWizardReferences($modelName, $modelData);
+        if (!empty($wizardReferences)) {
+            $configData['wizards'] = $wizardReferences;
+        }
+
+
         // Merge with included configs (included configs have lower priority)
         return array_merge($includedConfig, $configData);
     }
+
+
+
+
+
+    protected function buildWizardReferences($modelName, $modelData)
+    {
+        $wizards = [];
+
+        // Check fieldGroups for addToWizard references
+        if (!empty($modelData['fieldGroups'])) {
+            foreach ($modelData['fieldGroups'] as $group) {
+                if (!empty($group['addToWizard'])) {
+                    foreach ($group['addToWizard'] as $wizardRef) {
+                        $wizardId = $wizardRef['wizardId'] ?? null;
+                        if ($wizardId) {
+                            $wizards[$wizardId] = array_merge(
+                                ['groups' => []],
+                                $wizards[$wizardId] ?? []
+                            );
+
+                            // Find group ID/name
+                            $groupId = $this->getGroupIdFromGroup($group);
+                            $wizards[$wizardId]['groups'][] = $groupId;
+                        }
+                    }
+                }
+            }
+        }
+
+        return $wizards;
+    }
+
+    protected function getGroupIdFromGroup($group)
+    {
+        // If group has an explicit ID, use it
+        if (isset($group['id'])) {
+            return $group['id'];
+        }
+
+        // Otherwise, generate from title
+        return Str::slug($group['title'] ?? 'group');
+    }
+
+
+
 
     /**
      * Load included configuration files.
@@ -110,17 +164,17 @@ class ConfigGenerator extends Command
     {
         $includedConfig = [];
         $includes = $modelData['includes'] ?? [];
-        
+
         foreach ($includes as $includeFile) {
             $includePath = app_path("Modules/{$module}/Data/{$includeFile}");
-            
+
             if (File::exists($includePath)) {
                 $includedConfig = array_merge($includedConfig, include $includePath);
             } else {
                 $this->command->warn("Included file not found: {$includePath}");
             }
         }
-        
+
         return $includedConfig;
     }
 
@@ -138,7 +192,7 @@ class ConfigGenerator extends Command
         $fieldDefinitions = [];
         $fields = $modelData['fields'] ?? [];
         $relations = $modelData['relations'] ?? [];
-        
+
         // Process regular fields
         foreach ($fields as $fieldName => $field) {
             if (isset($field['partial'])) {
@@ -150,15 +204,15 @@ class ConfigGenerator extends Command
                 $fieldDefinitions[$fieldName] = $this->buildFieldDefinition($modelData, $fieldName, $field, $relations);
             }
         }
-        
+
         // Process relationship fields
         foreach ($relations as $relationName => $relationData) {
             $fieldDefinitions = array_merge(
-                $fieldDefinitions, 
+                $fieldDefinitions,
                 $this->buildRelationshipFieldDefinition($relationName, $relationData)
             );
         }
-        
+
         return $fieldDefinitions;
     }
 
@@ -173,11 +227,11 @@ class ConfigGenerator extends Command
     protected function loadPartialFieldDefinitions($module, $partialPath)
     {
         $fullPath = app_path("Modules/{$module}/Data/{$partialPath}");
-        
+
         if (File::exists($fullPath)) {
             return include $fullPath;
         }
-        
+
         $this->command->warn("Partial field definition file not found: {$fullPath}");
         return [];
     }
@@ -197,50 +251,57 @@ class ConfigGenerator extends Command
             'field_type' => $this->getFieldType($field['type'] ?? 'string'),
             'label' => $field['label'] ?? $this->generateLabel($fieldName),
         ];
-        
+
         // Add validation if present
         if (isset($field['validation'])) {
             $definition['validation'] = implode('|', $field['validation']);
 
-        // If field_type is file 
+            // If field_type is file 
         } else {
             $this->handleFileFieldType($modelData, $definition, $fieldName);
         }
-        
+
         // Add options if present
         if (isset($field['options'])) {
             $definition['options'] = $this->processOptions($field['options']);
         }
-        
+
         // Add autoGenerate if present
         if (isset($field['autoGenerate']) && $field['autoGenerate']) {
             $definition['autoGenerate'] = true;
         }
-        
+
         // Add multiSelect if present
         if (isset($field['multiSelect']) && $field['multiSelect']) {
             $definition['multiSelect'] = true;
         }
-        
+
         // Add reactivity if present
         if (isset($field['reactivity'])) {
             $definition['reactivity'] = $field['reactivity'];
         }
-        
+
         // Handle foreign key relationships
         if (isset($field['foreign'])) {
             $relationshipData = $this->findRelationshipByForeignKey($fieldName, $relations);
-            
+
             if ($relationshipData) {
                 $definition = array_merge($definition, $this->buildRelationshipDefinition($relationshipData, $fieldName));
             }
         }
-        
+
+
+        // Add "wizard" if present
+        if (isset($field['wizard'])) {
+            $definition['wizard'] = $field['wizard'];
+        }
+
         return $definition;
     }
 
 
-    protected function handleFileFieldType($modelData, &$definition, $fieldName) {
+    protected function handleFileFieldType($modelData, &$definition, $fieldName)
+    {
         $allowedDocumentTypes = ['pdf', 'doc', 'docx'];//, 'xls', 'xlsx', 'ppt', 'pptx', 'txt'];
         $allowedImageTypes = ['jpg', 'jpeg', 'png', 'bmp'];// 'gif', 'svg'];
         $allowedFileTypes = array_merge($allowedDocumentTypes, $allowedImageTypes);
@@ -261,7 +322,7 @@ class ConfigGenerator extends Command
                 $definition['fileTypes'] = $allowedImageTypes;
                 $definition['validation'] = 'mimes:' . implode(',', $allowedImageTypes) . '|max:' . $allowedFileSize;
 
-            } else if (isset($modelData['fields'][$fieldName]['fileTypes']) ) {
+            } else if (isset($modelData['fields'][$fieldName]['fileTypes'])) {
                 if (is_array($modelData['fields'][$fieldName]['fileTypes'])) {
                     $definition['validation'] = 'mimes:' . implode(',', $modelData['fields'][$fieldName]['fileTypes']) . '|max:' . $allowedFileSize;
                     $definition['fileTypes'] = $modelData['fields'][$fieldName]['fileTypes'];
@@ -307,7 +368,7 @@ class ConfigGenerator extends Command
             'datepicker' => 'datepicker',//'date',
             'datetimepicker' => 'datetimepicker',//'datetime-local',
         ];
-        
+
         return $typeMappings[$type] ?? $type;
     }
 
@@ -335,7 +396,7 @@ class ConfigGenerator extends Command
         if (is_array($options)) {
             return $options;
         }
-        
+
         // Convert comma-separated string to array
         $optionsArray = array_map('trim', explode(',', $options));
         return array_combine($optionsArray, $optionsArray);
@@ -355,7 +416,7 @@ class ConfigGenerator extends Command
                 return $relationData;
             }
         }
-        
+
         return null;
     }
 
@@ -374,7 +435,7 @@ class ConfigGenerator extends Command
         $hintField = $relationData['hintField'] ?? null;
         $inlineAdd = $relationData['inlineAdd'] ?? false;
         $dynamicProperty = $this->getDynamicProperty($relationshipType, $fieldName);
-        
+
         return [
             'relationship' => [
                 'model' => $relatedModel,
@@ -409,9 +470,9 @@ class ConfigGenerator extends Command
         $inlineAdd = $relationData['inlineAdd'] ?? false;
         $foreignKey = $relationData['foreignKey'] ?? null;
         $display = $relationData['display'] ?? 'inline';
-        
+
         $definition = [];
-        
+
         switch ($relationshipType) {
             case 'hasMany':
             case 'belongsToMany':
@@ -437,7 +498,7 @@ class ConfigGenerator extends Command
                     'display' => $display,
                 ];
                 break;
-                
+
             case 'morphTo':
                 $definition[$relationName] = [
                     'field_type' => 'morphTo',
@@ -450,12 +511,12 @@ class ConfigGenerator extends Command
                     'display' => $display,
                 ];
                 break;
-                
+
             case 'morphToMany':
                 $pivotTable = $relationData['pivotTable'] ?? '';
                 $relatedPivotKey = $relationData['relatedPivotKey'] ?? '';
                 $morphType = $relationData['morphType'] ?? '';
-                
+
                 $definition[$relationName] = [
                     'field_type' => 'morphToMany',
                     'relationship' => [
@@ -480,7 +541,7 @@ class ConfigGenerator extends Command
                 ];
                 break;
         }
-        
+
         return $definition;
     }
 
@@ -496,20 +557,20 @@ class ConfigGenerator extends Command
         if (empty($reportData)) {
             return [];
         }
-        
+
         // Ensure model paths are properly formatted
         if (isset($reportData['model'])) {
             $reportData['model'] = "App\\Modules\\{$module}\\Models\\{$reportData['model']}";
         }
-        
+
         if (isset($reportData['itemsModel'])) {
             $reportData['itemsModel'] = "App\\Modules\\{$module}\\Models\\{$reportData['itemsModel']}";
         }
-        
+
         if (isset($reportData['recordModel'])) {
             $reportData['recordModel'] = "App\\Modules\\{$module}\\Models\\{$reportData['recordModel']}";
         }
-        
+
         return $reportData;
     }
 
@@ -524,7 +585,7 @@ class ConfigGenerator extends Command
         $content = "<?php\n\nreturn [\n";
         $content .= $this->arrayToPhpString($configData, 1);
         $content .= "];\n";
-        
+
         return $content;
     }
 
@@ -539,10 +600,10 @@ class ConfigGenerator extends Command
     {
         $indent = str_repeat('  ', $indentLevel);
         $lines = [];
-        
+
         foreach ($array as $key => $value) {
             $line = "{$indent}'{$key}' => ";
-            
+
             if (is_array($value)) {
                 if (empty($value)) {
                     $line .= '[],';
@@ -558,10 +619,10 @@ class ConfigGenerator extends Command
             } else {
                 $line .= "'{$value}',";
             }
-            
+
             $lines[] = $line;
         }
-        
+
         return implode("\n", $lines) . "\n";
     }
 
@@ -576,11 +637,11 @@ class ConfigGenerator extends Command
     {
         $fieldName = str_replace("_id", "", $fieldName);
         $fieldName = Str::camel($fieldName);
-        
+
         if ($relationshipType === "hasMany" || $relationshipType === "belongsToMany") {
             $fieldName = Str::plural($fieldName);
         }
-        
+
         return $fieldName;
     }
 }
