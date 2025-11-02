@@ -271,8 +271,9 @@ class ModelGenerator extends Command
         switch ($type) {
             case 'boolean':
             case 'bool':
-            case 'checkbox':
-                return 'boolean';
+            case 'boolcheckbox':
+            case 'boolradio':
+                return 'boolean';//QuickerFaster\LaravelUI\Casts\BooleanDisplayCast::class';
                 
             case 'integer':
             case 'int':
@@ -299,7 +300,11 @@ class ModelGenerator extends Command
                 
             case 'datetime':
             case 'timestamp':
+            case 'datetimepicker':
                 return 'datetime';
+
+            case 'encrypted_string':
+                return 'encrypted';
                 
             default:
                 return null;

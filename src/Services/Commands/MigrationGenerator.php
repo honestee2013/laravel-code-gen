@@ -111,42 +111,52 @@ class MigrationGenerator extends Command
      * @param bool $isPivot
      * @return string
      */
-    protected function getMigrationPath($module, $modelName, $isPivot = false)
-    {
-        $tableName = strtolower(Str::plural(Str::snake($modelName)));
-        $migrationName = 'create_' . $tableName . '_table';
+protected function getMigrationPath($module, $modelName, $isPivot = false)
+{
+    $tableName = strtolower(Str::plural(Str::snake($modelName)));
+    $migrationName = 'create_' . $tableName . '_table';
 
-        if ($isPivot) {
-            $migrationName = 'create_' . strtolower(Str::singular(Str::snake($modelName))) . '_table';
-        }
-
-        $migrationPath = app_path("Modules/" . ucfirst($module) . "/Database/Migrations/");
-
-        if (!File::exists($migrationPath)) {
-            File::makeDirectory($migrationPath, 0755, true);
-        }
-
-        // Check for existing migration with the same name
-        $existingFiles = File::files($migrationPath);
-        foreach ($existingFiles as $file) {
-            if (str_contains($file->getFilename(), $migrationName)) {
-                return $file->getRealPath();
-            }
-        }
-
-        // Generate a unique timestamp without sleep
-        $timestamp = date('Y_m_d_His');
-        $counter = 0;
-        $migrationFullPath = $migrationPath . $timestamp . '_' . $migrationName . '.php';
-
-        // If file exists (unlikely), append a counter
-        while (File::exists($migrationFullPath)) {
-            $counter++;
-            $migrationFullPath = $migrationPath . $timestamp . '_' . $counter . '_' . $migrationName . '.php';
-        }
-
-        return $migrationFullPath;
+    if ($isPivot) {
+        $migrationName = 'create_' . strtolower(Str::singular(Str::snake($modelName))) . '_table';
     }
+
+    $migrationPath = app_path("Modules/" . ucfirst($module) . "/Database/Migrations/");
+
+    if (!File::exists($migrationPath)) {
+        File::makeDirectory($migrationPath, 0755, true);
+    }
+
+    // Check for existing migration with the same name
+    $existingFiles = File::files($migrationPath);
+    foreach ($existingFiles as $file) {
+        if (str_contains($file->getFilename(), $migrationName)) {
+            return $file->getRealPath();
+        }
+    }
+
+    // 🔑 Self-contained timestamp sequencing
+    static $nextTimestamp = null;
+
+    if ($nextTimestamp === null) {
+        // Initialize to current time on first call
+        $nextTimestamp = time();
+    } else {
+        // Increment by 1 second for each subsequent call
+        $nextTimestamp++;
+    }
+
+    $timestamp = date('Y_m_d_His', $nextTimestamp);
+    $migrationFullPath = $migrationPath . $timestamp . '_' . $migrationName . '.php';
+
+    // Safety fallback (should rarely trigger)
+    $counter = 0;
+    while (File::exists($migrationFullPath)) {
+        $counter++;
+        $migrationFullPath = $migrationPath . $timestamp . '_' . $counter . '_' . $migrationName . '.php';
+    }
+
+    return $migrationFullPath;
+}
 
     /**
      * Get the migration stub content.
@@ -283,15 +293,15 @@ class MigrationGenerator extends Command
         // Add indexes from YAML if defined
         if (isset($modelData['indexes'])) {
             foreach ($modelData['indexes'] as $index) {
-                $col = is_array($index) ? $index['column'] : $index;
-                $indexLines[] = "\t\t\t\$table->index('{$col}');";
+                // $col = is_array($index) ? $index['column'] : $index;
+                $indexLines[] = "\t\t\t\$table->index('{$index}');";
             }
         }
 
         if (isset($modelData['uniqueIndexes'])) {
             foreach ($modelData['uniqueIndexes'] as $index) {
-                $col = is_array($index) ? $index['column'] : $index;
-                $indexLines[] = "\t\t\t\$table->unique('{$col}');";
+                // $col = is_array($index) ? $index['column'] : $index;
+                $indexLines[] = "\t\t\t\$table->unique('{$index}');";
             }
         }
 
@@ -301,6 +311,15 @@ class MigrationGenerator extends Command
                 $indexLines[] = "\t\t\t\$table->index(['{$colList}']);";
             }
         }
+
+
+        if (isset($modelData['compoundUniqueIndexes'])) {
+            foreach ($modelData['compoundUniqueIndexes'] as $cols) {
+                $colList = implode("', '", $cols);
+                $indexLines[] = "\t\t\t\$table->unique(['{$colList}']);";
+            }
+        }
+        
 
         // Add unique indexes from validation rules
         if (isset($modelData['fields'])) {
@@ -343,6 +362,7 @@ class MigrationGenerator extends Command
                 return 'string';
             case 'text':
             case 'textarea':
+            case 'encrypted_string':    
                 return 'text';
             case 'integer':
             case 'int':
@@ -353,12 +373,15 @@ class MigrationGenerator extends Command
                 return 'decimal';
             case 'boolean':
             case 'bool':
+            case 'boolcheckbox':
+            case 'boolradio':
                 return 'boolean';
             case 'date':
             case 'datepicker':
                 return 'date';
             case 'datetime':
             case 'timestamp':
+            case 'datetimepicker':    
                 return 'datetime';
             case 'timepicker':
             case 'time':

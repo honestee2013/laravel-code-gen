@@ -27,11 +27,15 @@ class GenerateAllSchemas extends Command
 
     // Define strict module execution order
     protected $modules = [
-        'Core' => [],
+        //'Core' => [],
         //'Organization' => [],
-        'User' => ['user_management.yaml', 'user_status_management.yaml'],
+        //'User' => ['user_management.yaml', 'user_status_management.yaml'],
         'Hr' =>  [
-            'employee_management.yaml',
+            'context_settings.yaml',            
+            'context_people.yaml',
+            'context_payroll.yaml',
+            'context_time.yaml',
+            /*'employee_management.yaml',
             //'onboarding_and_employee_lifecycle.yaml',
 
             // Payroll & Attendance related files
@@ -54,7 +58,7 @@ class GenerateAllSchemas extends Command
             //'salaries_and_payment_structure.yaml',
             //'user_salary_records.yaml',
 
-            //'departments.yaml',
+            //'departments.yaml',*/
         ],
         //'Profile' => [],
         //'Item' => [],
@@ -70,6 +74,7 @@ class GenerateAllSchemas extends Command
     public function handle()
     {
         $basePath = base_path('app/Modules/Core/Yamls/Modules');
+        //$basePath = base_path('app/Yaml/Hr');
 
         // Get CLI argument and determine module execution order
         $cliModules = $this->option('modules');
@@ -102,9 +107,9 @@ class GenerateAllSchemas extends Command
 
             foreach ($yamlFiles as $file) {
                 $relativePath = str_replace(base_path() . '/', '', $file->getRealPath());
-                $this->info("Running: php artisan app:generate-from-schema $relativePath");
+                $this->info("Running: php artisan app:generate-from-yaml $relativePath");
 
-                $this->call('app:generate-from-schema', ['schema_file' => $relativePath]);
+                $this->call('app:generate-from-yaml', ['yaml_file' => $relativePath]);
             }
         }
 
