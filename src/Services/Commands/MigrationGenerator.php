@@ -33,11 +33,13 @@ class MigrationGenerator extends Command
      */
     public function generateMigration($module, $modelName, $modelData)
     {
-        // Generate pivot migrations for relationships first
-        $this->generatePivotMigrations($module, $modelName, $modelData);
 
         // Generate the main migration only once
         $this->generateMainMigration($module, $modelName, $modelData);
+
+        // Generate pivot migrations for relationships Last
+        $this->generatePivotMigrations($module, $modelName, $modelData);
+
     }
 
     /**
@@ -57,12 +59,14 @@ class MigrationGenerator extends Command
         foreach ($modelData['relations'] as $relationName => $relationData) {
             switch ($relationData['type']) {
                 case 'belongsToMany':
-                    $pivotTableName = $relationData['pivotTable'] ?? Str::singular(Str::lower($modelName)) . '_' . Str::singular(Str::lower(class_basename($relationData['model'])));
-                    $foreignKey1 = $relationData['relatedKey'] ?? 'id';
-                    $foreignKey2 = $relationData['foreignKey'] ?? 'id';
                     $model1 = Str::snake($modelName);
                     $model2 = Str::snake(class_basename($relationData['model']));
-                    $this->generatePivotMigration($module, $pivotTableName, $model2, $model1, $foreignKey1, $foreignKey2);
+
+                    $pivotTableName = $relationData['pivotTable'] ?? Str::singular(Str::lower($modelName)) . '_' . Str::singular(Str::lower(class_basename($relationData['model'])));
+                    $foreignKey1 = $relationData['relatedPivotKey'] ?? $model1.'_id';
+                    $foreignKey2 = $relationData['foreignPivotKey'] ?? $model2.'_id';
+
+                    $this->generatePivotMigration($module, $pivotTableName, $model1, $model2, $foreignKey1, $foreignKey2);
                     break;
 
                 case 'morphToMany':
@@ -201,16 +205,27 @@ protected function getMigrationPath($module, $modelName, $isPivot = false)
     protected function generateColumns($fields)
     {
         $columns = '';
+        
         foreach ($fields as $fieldName => $fieldData) {
             if (str_contains($fieldName, '_confirmation')) {
                 continue; // Skip confirmation fields
             }
 
-            $columnDefinition = $this->buildColumnDefinition($fieldName, $fieldData);
-            $columns .= $columnDefinition . ";\n\t\t\t";
+            // buildColumnDefinition now returns an ARRAY of strings/lines of code
+            $linesArray = $this->buildColumnDefinition($fieldName, $fieldData);
+            
+            // Join the array elements with a newline character and the correct indentation (tabs or 4 spaces x 3 = 12 spaces)
+            // Adjust the indentation ('            ' or '\t\t\t') to match your coding style.
+            $columnDefinitionString = implode("\n            ", $linesArray);
+            
+            // Append the generated line(s) to the total columns string
+            $columns .= $columnDefinitionString . (isset($fieldData['foreign'])? ";\n            ": "\n            "); 
+            // The "\n            " adds a new line and correct indentation for the NEXT field iteration.
         }
+        
         return $columns;
     }
+
 
     /**
      * Build a single column definition.
@@ -224,11 +239,33 @@ protected function getMigrationPath($module, $modelName, $isPivot = false)
         $type = $this->getFieldType($fieldData);
         $modifiers = $fieldData['modifiers'] ?? [];
         $foreign = $fieldData['foreign'] ?? null;
+        $isExplicitConstraint = $fieldData['isExplicitConstraint'] ?? false;
 
-        // Handle foreign key separately
-        if ($foreign) {
-            return $this->buildForeignKeyColumn($fieldName, $modifiers, $foreign);
+        // If it's an implicit foreignId (modern Laravel)
+        if ($foreign && !$isExplicitConstraint) {
+            // This returns a single line of code
+            return [$this->buildForeignKeyColumn($fieldName, $modifiers, $foreign)];
+        } 
+        
+        // If it's an explicit foreign constraint (traditional Laravel)
+        if ($foreign && $isExplicitConstraint) {
+            // We need TWO lines: the column definition AND the constraint definition.
+
+            // 1. Build the raw column definition line first (e.g., $table->unsignedBigInteger('user_id');)
+            $columnDefinition = "\$table->{$type}('{$fieldName}')";
+            $columnDefinition = $this->addModifiers($columnDefinition, $modifiers);
+            $columnDefinition .= ";"; // Add semicolon here
+
+            // 2. Build the explicit constraint line (e.g., $table->foreign(...)->on(...);)
+            // Note: The explicit constraint method provided previously assumed modifiers 
+            // were not passed to it, so I updated the call signature below.
+            $constraintLine = $this->buildForeignKeyColumnExplicitConstraint($fieldName, $foreign);
+
+            // Return both lines as an array
+            return [$columnDefinition, $constraintLine];
         }
+
+        // --- Standard Column Definition (no foreign key) ---
 
         $columnDefinition = "\$table->{$type}('{$fieldName}'";
 
@@ -244,9 +281,12 @@ protected function getMigrationPath($module, $modelName, $isPivot = false)
 
         $columnDefinition .= ")";
         $columnDefinition = $this->addModifiers($columnDefinition, $modifiers);
+        $columnDefinition .= ";"; // Add semicolon for standard line
 
-        return $columnDefinition;
+        // Return a single line wrapped in an array for consistency
+        return [$columnDefinition];
     }
+
 
     /**
      * Build a foreign key column definition.
@@ -279,6 +319,46 @@ protected function getMigrationPath($module, $modelName, $isPivot = false)
 
         return $columnDefinition;
     }
+
+
+
+
+    /**
+     * Build the code for an explicit foreign key constraint.
+     * Assumes the column (e.g., user_id) has already been created (e.g., $table->unsignedBigInteger('user_id')).
+     *
+     * @param string $fieldName The name of the local column (e.g., 'user_id')
+     * @param array $foreign Foreign key details (table, column, onDelete, onUpdate)
+     * @return string The generated PHP code line for the constraint
+     */
+    protected function buildForeignKeyColumnExplicitConstraint($fieldName, $foreign)
+    {
+        $columnDefinition = "\$table->foreign('{$fieldName}')";
+        $columnDefinition .= "->references('{$foreign['column']}')";
+        $columnDefinition .= "->on('{$foreign['table']}')";
+
+        if (isset($foreign['onDelete'])) {
+            $onDelete = strtolower($foreign['onDelete']);
+            if (in_array($onDelete, ['cascade', 'restrict', 'set null', 'no action'])) {
+                $columnDefinition .= "->onDelete('{$onDelete}')";
+            }
+        }
+
+        if (isset($foreign['onUpdate'])) {
+            $onUpdate = strtolower($foreign['onUpdate']);
+            if (in_array($onUpdate, ['cascade', 'restrict', 'set null', 'no action'])) {
+                $columnDefinition .= "->onUpdate('{$onUpdate}')";
+            }
+        }
+        
+        $columnDefinition .= ";"; // Add semicolon at the end
+
+        return $columnDefinition;
+    }
+
+
+
+
 
     /**
      * Generate indexes for the migration.
@@ -468,8 +548,8 @@ protected function getMigrationPath($module, $modelName, $isPivot = false)
         }
         $stub = File::get($stubPath);
         $stub = str_replace('{{pivotTableName}}', $pivotTableName, $stub);
-        $stub = str_replace('{{model1}}', strtolower(Str::snake($model1)), $stub);
-        $stub = str_replace('{{model2}}', strtolower(Str::snake($model2)), $stub);
+        $stub = str_replace('{{model1}}', strtolower(Str::snake(Str::plural($model1))), $stub);
+        $stub = str_replace('{{model2}}', strtolower(Str::snake(Str::plural($model2))), $stub);
         $stub = str_replace('{{foreignKey1}}', $foreignKey1, $stub);
         $stub = str_replace('{{foreignKey2}}', $foreignKey2, $stub);
         return $stub;

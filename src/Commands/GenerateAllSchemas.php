@@ -7,8 +7,10 @@ use Illuminate\Support\Facades\File;
 
 class GenerateAllSchemas extends Command
 {
-    protected $signature = 'app:generate-all-schemas {--modules= : Comma-separated list of modules to process in order}';
+    protected $signature = 'app:generate-all-schemas {--modules= : List of comma separated modules}  {--basePath= : Source directory. default to App/Modules/System/Yamls/Modules}';
     protected $description = 'Generate schemas from YAML files in a sequential order';
+
+
     /*
         // Execute all the .yaml files inside all modules in 'app/Modules/Core/Yamls/Modules'
         php artisan app:generate-all-schemas
@@ -25,9 +27,11 @@ class GenerateAllSchemas extends Command
         ];
     */
 
+    
+
     // Define strict module execution order
     protected $modules = [
-        //'Core' => [],
+        'System' => [],
         //'Organization' => [],
         //'User' => ['user_management.yaml', 'user_status_management.yaml'],
         'Hr' =>  [
@@ -73,11 +77,15 @@ class GenerateAllSchemas extends Command
 
     public function handle()
     {
-        $basePath = base_path('app/Modules/Core/Yamls/Modules');
         //$basePath = base_path('app/Yaml/Hr');
+        $defaultBasePath = base_path('app/Modules/System/Yamls/Modules');
+
 
         // Get CLI argument and determine module execution order
         $cliModules = $this->option('modules');
+        $basePath = $this->option('basePath');
+        $basePath = $basePath?? $defaultBasePath;
+
         $modulesToProcess = $cliModules ? explode(',', $cliModules) : array_keys($this->modules);
 
         foreach ($modulesToProcess as $module) {

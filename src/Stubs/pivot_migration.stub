@@ -14,8 +14,8 @@ return new class extends Migration
         Schema::create('{{pivotTableName}}', function (Blueprint $table) {
             $table->id();
 
-            $table->foreignId('{{foreignKey1}}')->nullable()->constrained('{{model1}}s')->onDelete('cascade');
-            $table->foreignId('{{foreignKey2}}')->nullable()->constrained('{{model2}}s')->onDelete('cascade');
+            $table->foreignId('{{foreignKey1}}')->nullable()->constrained('{{model1}}')->onDelete('cascade');
+            $table->foreignId('{{foreignKey2}}')->nullable()->constrained('{{model2}}')->onDelete('cascade');
 
             $table->timestamps();
         });

@@ -266,6 +266,14 @@ class ConfigGenerator extends Command
             $definition['options'] = $this->processOptions($field['options']);
         }
 
+
+        // Add options from file if present
+        if (isset($field['optionsFrom'])) {
+            $definition['options'] = $this->getOptionsFromFile($field['optionsFrom']);
+            unset($field['optionsFrom']); // Replace the [optionsFrom] with [options]
+        }
+
+
         // Add autoGenerate if present
         if (isset($field['autoGenerate']) && $field['autoGenerate']) {
             $definition['autoGenerate'] = true;
@@ -401,6 +409,38 @@ class ConfigGenerator extends Command
         $optionsArray = array_map('trim', explode(',', $options));
         return array_combine($optionsArray, $optionsArray);
     }
+
+
+
+
+protected function getOptionsFromFile($fileName) {
+    // 1. Build the path correctly
+    $optionFilePath = __DIR__ . '/../../Options/'. \Str::plural(strtolower($fileName)).'.php';
+    
+    // 2. Check if the file exists
+    if (!File::exists($optionFilePath)) {
+        $this->command->warn("Option file not found at: {$optionFilePath}");
+        // Decide what to return if the file doesn't exist (e.g., an empty array)
+        return []; 
+    }
+
+    // 3. Execute the PHP file and return its result
+    // The 'include' statement will run the PHP inside the file and return 
+    // the value specified by 'return array(...)'.
+    $options = include $optionFilePath;
+
+    // Optional: Add a check to ensure it actually returned an array
+    if (!is_array($options)) {
+        $this->command->error("Option file did not return a valid array: {$optionFilePath}");
+        return [];
+    }
+    
+    return $options;
+}
+
+
+
+
 
     /**
      * Find relationship data by foreign key.

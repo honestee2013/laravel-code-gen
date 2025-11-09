@@ -17,32 +17,34 @@ class TopBarLinksGenerator extends BaseLinksGenerator
      * @return void
      * @throws Exception
      */
-    public function generateTopBarLinks($module, $modelName, $modelData)
-    {
-        $topNav = $modelData['topNav'] ?? [];
+public function generateTopBarLinks($module, $modelName, $modelData)
+{
+    $topNav = $modelData['topNav'] ?? [];
 
-        // Check if top nav should be added
-        if (!isset($topNav['add']) || $topNav['add'] == false) {
-            return;
-        }
+    // Check if top nav should be added
+    if (!isset($topNav['add']) || $topNav['add'] == false) {
+        return;
+    }
 
-        /*$context = $topNav['context']?? '';
-        $context = $context? $context."_": '';*/
-        $fileName = "top_bar_menu.php";
+    $fileName = "top_bar_menu.php";
 
-        try {
-            $topNavConfigPath = base_path("app/Modules/{$module}/Config/$fileName");
-            $newEntry = $this->getTopBarEntryArray($module, $modelName, $modelData);
+    try {
+        $topNavConfigPath = base_path("app/Modules/{$module}/Config/$fileName");
+        $newEntry = $this->getTopBarEntryArray($module, $modelName, $modelData);
+        
+        // Read existing configuration
+        $existing = $this->readConfig($topNavConfigPath);
+        
+        // Check for duplicates
+        if ($this->isDuplicateEntry($existing, $newEntry)) {
+            $this->command->info("Top bar entry already exists. Skipping config update: {$topNavConfigPath}");
             
-            // Read existing configuration
-            $existing = $this->readConfig($topNavConfigPath);
+            // The function was previously returning here:
+            // return; 
             
-            // Check for duplicates
-            if ($this->isDuplicateEntry($existing, $newEntry)) {
-                $this->command->info("Top bar entry already exists. Skipping: {$topNavConfigPath}");
-                return;
-            }
-            
+            // The configuration update is skipped, but execution continues below:
+
+        } else {
             // Add the new entry
             $existing[] = $newEntry;
             
@@ -50,15 +52,18 @@ class TopBarLinksGenerator extends BaseLinksGenerator
             $this->writeConfig($topNavConfigPath, $existing);
             
             $this->command->info("Top bar menu updated: {$topNavConfigPath}");
-            
-            // Generate Blade component if needed
-            $this->generateBladeComponent($module, $modelName, $modelData);
-            
-        } catch (Exception $e) {
-            $this->command->error("Failed to generate top nav links: {$e->getMessage()}");
-            throw $e;
         }
+
+        // >>> MOVE THIS LINE OUTSIDE the if/else block <<<
+        // This code will now execute whether the entry was new or existing.
+        $this->generateBladeComponent($module, $modelName, $modelData); 
+        
+    } catch (Exception $e) {
+        $this->command->error("Failed to generate top nav links: {$e->getMessage()}");
+        throw $e;
     }
+}
+
 
     /**
      * Get the top nav entry array for a model.
@@ -113,8 +118,8 @@ class TopBarLinksGenerator extends BaseLinksGenerator
 
         //$bladePath = app_path("Modules/{$module}/Resources/views/components/layouts/navbars/auth/$fileName");
         // Top bar is shared among multiple pages they are housed inside the [Core] module
-        $bladePath = app_path("Modules/Core/Resources/views/components/layouts/navbars/auth/$fileName");
-      
+        $bladePath = app_path("Modules/".ucfirst($module)."/Resources/views/components/layouts/navbars/auth/$fileName");
+
         if (!File::exists(dirname($bladePath))) {
             File::makeDirectory(dirname($bladePath), 0755, true);
         }
