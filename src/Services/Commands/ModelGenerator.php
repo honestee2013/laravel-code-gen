@@ -68,12 +68,24 @@ class ModelGenerator extends Command
     protected function getModelStub($module, $modelName, $modelData)
     {
         $stub = $this->getStubContent($module, $modelName, $modelData);
-        
+        //dd($this->getExtendImports($modelName, $modelData));
+
         // Perform all replacements
         $replacements = [
             '{{namespace}}' => $this->getNamespace($module),
             '{{module}}' => $module,
             '{{modelName}}' => $modelName,
+
+
+
+            '{{extends}}' => $this->getExtends($modelName, $modelData),
+            '{{implements}}' => $this->getImplements($modelName, $modelData),
+
+            '{{extendImports}}' => $this->getExtendImports($modelName, $modelData),
+            '{{implementImports}}' => $this->getImplementImports($modelName, $modelData),
+
+
+
             '{{tableName}}' => $this->getTableName($modelName, $modelData),
             '{{fillable}}' => $this->getFillableProperties($modelData),
             '{{guarded}}' => $this->getGuardedProperties($modelData),
@@ -931,4 +943,225 @@ METHOD;
         
         return "protected \$dateFormat = '{$modelData['dateFormat']}';";
     }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/**
+ * Get the extends class for the model with proper inheritance chain.
+ *
+ * @param string $modelName
+ * @param array $modelData
+ * @return string
+ */
+protected function getExtends($modelName, $modelData)
+{
+    $extends = $modelData['extends'] ?? 'Model';
+    
+    // If extends is an array, use the last one (most specific)
+    if (is_array($extends)) {
+        $extends = end($extends);
+    }
+    
+    return class_basename($extends);
+}
+
+/**
+ * Get the imports for extended classes.
+ *
+ * @param string $modelName
+ * @param array $modelData
+ * @return string
+ */
+protected function getExtendImports($modelName, $modelData)
+{
+    $extends = $modelData['extends'] ?? 'Model';
+    $imports = [];
+    
+    if (is_array($extends)) {
+        foreach ($extends as $extendClass) {
+            $formattedImport = $this->formatExtendImport($extendClass);
+            if ($formattedImport) {
+                $imports[] = $formattedImport;
+            }
+        }
+    } else {
+        $formattedImport = $this->formatExtendImport($extends);
+        if ($formattedImport) {
+            $imports[] = $formattedImport;
+        }
+    }
+    
+    return implode("\n", array_unique($imports));
+}
+
+
+  
+
+    /**
+     * Get the interfaces implemented by the model.
+     *
+     * @param string $modelName
+     * @param array $modelData
+     * @return string
+     */
+    protected function getImplements($modelName, $modelData)
+    {
+        $implements = $modelData['implements'] ?? [];
+        
+        if (empty($implements)) {
+            return '';
+        }
+        
+        if (is_string($implements)) {
+            $implements = [$implements];
+        }
+        
+        $interfaceNames = array_map(function($interface) {
+            return class_basename($interface);
+        }, $implements);
+        
+        return 'implements ' . implode(', ', $interfaceNames);
+    }
+
+    /**
+     * Get the imports for implemented interfaces.
+     *
+     * @param string $modelName
+     * @param array $modelData
+     * @return string
+     */
+    protected function getImplementImports($modelName, $modelData)
+    {
+        $implements = $modelData['implements'] ?? [];
+        
+        if (empty($implements)) {
+            return '';
+        }
+        
+        if (is_string($implements)) {
+            $implements = [$implements];
+        }
+        
+        $imports = [];
+        foreach ($implements as $interface) {
+            $imports[] = $this->formatInterfaceImport($interface);
+        }
+        
+        return implode("\n", array_filter($imports));
+    }
+
+    /**
+     * Build extends chain for multiple inheritance.
+     *
+     * @param array $extendsChain
+     * @return string
+     */
+    protected function buildExtendsChain(array $extendsChain)
+    {
+        $chain = array_map(function($class) {
+            return class_basename($class);
+        }, $extendsChain);
+        
+        return implode(' extends ', $chain);
+    }
+
+/**
+ * Format extend class import with proper namespace.
+ *
+ * @param string $extendClass
+ * @return string
+ */
+protected function formatExtendImport($extendClass)
+{
+    // If it's already a fully qualified class name
+    if (Str::contains($extendClass, '\\')) {
+        return "use {$extendClass};";
+    }
+    
+    // Handle Laravel base models
+    $laravelBaseModels = [
+        'Model' => 'Illuminate\\Database\\Eloquent\\Model',
+        'Authenticatable' => 'Illuminate\\Foundation\\Auth\\User',
+        'Pivot' => 'Illuminate\\Database\\Eloquent\\Relations\\Pivot',
+    ];
+    
+    if (isset($laravelBaseModels[$extendClass])) {
+        return "use {$laravelBaseModels[$extendClass]};";
+    }
+    
+    return '';
+}
+
+    /**
+     * Format interface import with proper namespace.
+     *
+     * @param string $interface
+     * @return string
+     */
+    protected function formatInterfaceImport($interface)
+    {
+        // If it's already a fully qualified interface name
+        if (interface_exists($interface) || Str::contains($interface, '\\')) {
+            return "use {$interface};";
+        }
+        
+        // Common Laravel interfaces
+        $laravelInterfaces = [
+            'Authenticatable' => 'Illuminate\\Contracts\\Auth\\Authenticatable',
+            'Authorizable' => 'Illuminate\\Contracts\\Auth\\Access\\Authorizable',
+            'CanResetPassword' => 'Illuminate\\Contracts\\Auth\\CanResetPassword',
+            'MustVerifyEmail' => 'Illuminate\\Contracts\\Auth\\MustVerifyEmail',
+            'HasMedia' => 'Spatie\\MediaLibrary\\HasMedia',
+            'HasTranslations' => 'Spatie\\Translatable\\HasTranslations',
+            'HasSlug' => 'Spatie\\Sluggable\\HasSlug',
+        ];
+        
+        if (isset($laravelInterfaces[$interface])) {
+            return "use {$laravelInterfaces[$interface]};";
+        }
+        
+        // Check common interface locations
+        $commonLocations = [
+            "App\\Contracts\\{$interface}",
+            "App\\Modules\\Core\\Contracts\\{$interface}",
+            "App\\Interfaces\\{$interface}",
+        ];
+        
+        foreach ($commonLocations as $location) {
+            if (interface_exists($location)) {
+                return "use {$location};";
+            }
+        }
+        
+        return '';
+    }
+
+
+
+
+
+
+
+
 }

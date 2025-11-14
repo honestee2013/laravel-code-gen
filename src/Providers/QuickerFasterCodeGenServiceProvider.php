@@ -31,6 +31,8 @@ use App\Modules\Core\Repositories\DataTables\FieldRepository;
 
 use QuickerFaster\CodeGen\Commands\GenerateAllSchemas;
 use QuickerFaster\CodeGen\Commands\GenerateFromSchema;
+
+
 use Illuminate\Support\Facades\Route;
 
 use Illuminate\Database\Eloquent\Factory as EloquentFactory; // only for Laravel < 8
@@ -72,7 +74,7 @@ class QuickerFasterCodeGenServiceProvider extends ServiceProvider
         if ($this->app->runningInConsole()) {
             $this->commands([
                 GenerateAllSchemas::class,
-                GenerateFromSchema::class
+                GenerateFromSchema::class,
             ]);
         }
 

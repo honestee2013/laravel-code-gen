@@ -17,6 +17,8 @@ use QuickerFaster\CodeGen\Services\Commands\TopBarLinksGenerator;
 use QuickerFaster\CodeGen\Services\Commands\BottomBarLinksGenerator;
 use QuickerFaster\CodeGen\Services\Commands\WizardGenerator;
 
+use QuickerFaster\CodeGen\Services\Commands\DashboardGenerator; // NEW
+
 
 class GenerateFromSchema extends Command
 {
@@ -50,6 +52,10 @@ class GenerateFromSchema extends Command
 
         // Generate wizards (NEW)
         (new WizardGenerator($this))->generateWizards($schemaFile, $schema);
+
+        // Generate dashboards (NEW)
+        (new DashboardGenerator($this))->generateDashboards($schemaFile, $schema);
+
 
         $this->info('Files generated successfully!');
         return Command::SUCCESS;

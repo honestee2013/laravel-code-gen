@@ -1,0 +1,99 @@
+<x-qf::livewire.bootstrap.layouts.dashboards.default-dashboard>
+    <x-slot name="mainTitle">
+        <strong class="text-info text-gradient">{{ $title }}</strong> Overview
+    </x-slot>
+
+    <x-slot name="subtitle">
+        <span class="text-primary text-xs fst-italic">
+            @if($isLoading)
+                <i class="fas fa-spinner fa-spin"></i> Updating...
+            @else
+                Last updated: {{ $lastUpdated->diffForHumans() }}
+            @endif
+        </span>
+    </x-slot>
+
+    <x-slot name="controls">
+        @include('qf::components.livewire.bootstrap.layouts.dashboards.dashboard-control')
+
+        <button wire:click="refreshData" class="btn btn-sm btn-outline-primary ms-2"
+                wire:loading.attr="disabled">
+            <i class="fas fa-sync-alt" wire:loading.class="fa-spin"></i>
+            <span wire:loading>Refreshing...</span>
+            <span wire:loading.remove>Refresh</span>
+        </button>
+    </x-slot>
+
+    {{-- Counter Widgets (CountUp & CountDown) --}}
+    <div class="row g-4 mb-4">
+        @foreach($widgetsConfig as $widgetId => $config)
+            @if(in_array($config['type'], ['count-up', 'count-down']))
+                <div class="{{ $config['size'] ?? 'col-12 col-sm-6 col-lg-3' }}">
+                    @if($config['type'] === 'count-up')
+                        <livewire:qf::widgets.counters.count-up-widget
+                            :widgetId="$widgetId"
+                            :config="$config"
+                            :initialData="$dashboardData[$widgetId] ?? null"
+                            :key="'countup-'.$widgetId"
+                        />
+                    @elseif($config['type'] === 'count-down')
+                        <livewire:qf::widgets.counters.count-down-widget
+                            :widgetId="$widgetId"
+                            :config="$config"
+                            :initialData="$dashboardData[$widgetId] ?? null"
+                            :key="'countdown-'.$widgetId"
+                        />
+                    @endif
+                </div>
+            @endif
+        @endforeach
+    </div>
+
+    {{-- Icon Card Widgets --}}
+    <div class="row g-4 mb-4">
+        @foreach($widgetsConfig as $widgetId => $config)
+            @if($config['type'] === 'icon-card')
+                <div class="{{ $config['size'] ?? 'col-12 col-sm-4' }}">
+                    <livewire:qf::widgets.cards.icon-card-widget
+                        :widgetId="$widgetId"
+                        :config="$config"
+                        :initialData="$dashboardData[$widgetId] ?? null"
+                        :key="'icon-'.$widgetId"
+                    />
+                </div>
+            @endif
+        @endforeach
+    </div>
+
+    {{-- Progress Bar Widgets --}}
+    <div class="row g-4 mb-4">
+        @foreach($widgetsConfig as $widgetId => $config)
+            @if($config['type'] === 'progress-bar')
+                <div class="{{ $config['size'] ?? 'col-12 col-sm-6' }}">
+                    <livewire:qf::widgets.progresses.progress-bar-widget
+                        :widgetId="$widgetId"
+                        :config="$config"
+                        :initialData="$dashboardData[$widgetId] ?? null"
+                        :key="'progress-'.$widgetId"
+                    />
+                </div>
+            @endif
+        @endforeach
+    </div>
+
+    {{-- Chart Widgets --}}
+    <div class="row g-4 mb-4">
+        @foreach($widgetsConfig as $widgetId => $config)
+            @if($config['type'] === 'chart')
+                <div class="{{ $config['size'] ?? 'col-12' }}">
+                    <livewire:qf::widgets.charts.chart-widget
+                        :widgetId="$widgetId"
+                        :config="$config"
+                        :initialData="$dashboardData[$widgetId] ?? null"
+                        :key="'chart-'.$widgetId"
+                    />
+                </div>
+            @endif
+        @endforeach
+    </div>
+</x-qf::livewire.bootstrap.layouts.dashboards.default-dashboard>
