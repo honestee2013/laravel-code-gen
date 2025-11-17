@@ -1,6 +1,6 @@
 <x-qf::livewire.bootstrap.layouts.dashboards.default-dashboard>
     <x-slot name="mainTitle">
-        <strong class="text-info text-gradient">{{ $title }}</strong> Overview
+        <strong class="text-info text-gradient">{{ $title }}</strong>
     </x-slot>
 
     <x-slot name="subtitle">
@@ -16,12 +16,15 @@
     <x-slot name="controls">
         @include('qf::components.livewire.bootstrap.layouts.dashboards.dashboard-control')
 
-        <button wire:click="refreshData" class="btn btn-sm btn-outline-primary ms-2"
-                wire:loading.attr="disabled">
-            <i class="fas fa-sync-alt" wire:loading.class="fa-spin"></i>
-            <span wire:loading>Refreshing...</span>
-            <span wire:loading.remove>Refresh</span>
-        </button>
+        {{--
+            This is moved to the dashboard-control.blade.php
+            <button wire:click="refreshData" class="btn btn-sm btn-outline-primary ms-2 rounded-pill"
+                    wire:loading.attr="disabled">
+                <i class="fas fa-sync-alt" wire:loading.class="fa-spin"></i>
+                <span wire:loading>Refreshing...</span>
+                <span wire:loading.remove>Refresh</span>
+            </button>
+        --}}
     </x-slot>
 
     {{-- Counter Widgets (CountUp & CountDown) --}}

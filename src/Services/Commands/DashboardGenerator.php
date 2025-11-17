@@ -307,7 +307,7 @@ protected function getDashboardManagerStub($dashboardId, $module, $dashboardData
         return <<<BLADE
 <x-qf::livewire.bootstrap.layouts.dashboards.default-dashboard>
     <x-slot name="mainTitle">
-        <strong class="text-info text-gradient">{$title}</strong> Overview
+        <strong class="text-info text-gradient">{$title}</strong>
     </x-slot>
 
     <x-slot name="subtitle">
