@@ -41,6 +41,10 @@ class BladeGenerator extends Command
             } else {
                 $this->generateStandardView($module, $modelName, $modelData);
             }
+
+            // Always add dashboard blade view
+            $this->generateDashboardView($module, $modelName, $modelData);
+
         } catch (Exception $e) {
             $this->command->error("Failed to generate blade file: {$e->getMessage()}");
             throw $e;
@@ -104,6 +108,43 @@ class BladeGenerator extends Command
         
         $this->command->info("Blade view created: {$viewPath}");
     }
+
+
+
+
+    protected function generateDashboardView($module, $modelName, $modelData) {
+        $viewPath = app_path("Modules/".ucfirst($module)."/Resources/views/dashboard.blade.php");
+        
+        // Create directory if it doesn't exist
+        if (!File::exists(dirname($viewPath))) {
+            File::makeDirectory(dirname($viewPath), 0755, true);
+        }
+        
+        $context = "people";
+
+    $stub = "<x-qf::livewire.bootstrap.layouts.app>
+    <x-slot name=\"topNav\">
+        <livewire:qf::layouts.navs.top-nav moduleName=\"$module\">
+    </x-slot>
+
+    <x-slot name=\"sidebar\">
+        <livewire:qf::layouts.navs.sidebar context=\"$context\"  moduleName=\"$module\">
+    </x-slot>
+
+    <x-slot name=\"bottomBar\">
+        <livewire:qf::layouts.navs.bottom-bar context=\"$context\" moduleName=\"$module\">
+    </x-slot>
+
+    <livewire:qf::dashboards.dashboard-manager moduleName=\"$module\" />
+</x-qf::livewire.bootstrap.layouts.app>";
+        File::put($viewPath, $stub);
+        
+        $this->command->info("Dashboard blade view created: {$viewPath}");
+    }
+
+
+
+
 
     /**
      * Get the blade stub content with all replacements.

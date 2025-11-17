@@ -1,0 +1,17 @@
+<x-qf::livewire.bootstrap.layouts.app>
+    <x-slot name="topNav">
+        <livewire:qf::layouts.navs.top-nav moduleName="{{moduleName}}">
+    </x-slot>
+
+    <x-slot name="sidebar">
+        <livewire:qf::layouts.navs.sidebar context="{{context}}"  moduleName="{{moduleName}}">
+    </x-slot>
+
+    <x-slot name="bottomBar">
+        <livewire:qf::layouts.navs.bottom-bar context="{{context}}" moduleName="{{moduleName}}">
+    </x-slot>
+
+    <livewire:qf::dashboards.dashboard-manager moduleName="{{moduleName}}" />
+</x-qf::livewire.bootstrap.layouts.app>
+
+
