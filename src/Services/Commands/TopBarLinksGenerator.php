@@ -104,48 +104,94 @@ public function generateTopBarLinks($module, $modelName, $modelData)
      * @param array $modelData
      * @return void
      */
-    protected function generateBladeComponent($module, $modelName, $modelData)
-    {
-        $topNav = $modelData['topNav'] ?? [];
-        // Only generate Blade component if explicitly requested
-        /*if (!($topNav['generateBlade'] ?? false)) {
-            return;
-        }*/
-        
-        /*$context = $topNav['context']?? '';
-        $context = $context? $context."-": '';*/
-        $fileName = "top-nav-links.blade.php"; // Top bar is usually a nav, so naming it accordingly
+protected function generateBladeComponent($module, $modelName, $modelData)
+{
+    $topNav = $modelData['topNav'] ?? [];
+    
+    $fileName = "top-nav-links.blade.php";
+    $bladePath = app_path("Modules/".ucfirst($module)."/Resources/views/components/layouts/navbars/auth/$fileName");
 
-        //$bladePath = app_path("Modules/{$module}/Resources/views/components/layouts/navbars/auth/$fileName");
-        // Top bar is shared among multiple pages they are housed inside the [Core] module
-        $bladePath = app_path("Modules/".ucfirst($module)."/Resources/views/components/layouts/navbars/auth/$fileName");
-
-        if (!File::exists(dirname($bladePath))) {
-            File::makeDirectory(dirname($bladePath), 0755, true);
-        }
-        
-        $stub = $this->getTopBarLinksStub($module, $modelName, $modelData);
-        
-        // Check if the file already exists
-        if (File::exists($bladePath)) {
-            $existingContent = File::get($bladePath);
-            
-            if (str_contains($existingContent, $stub)) {
-                $this->command->info("Top nav link already exists in Blade component: {$bladePath}");
-                return;
-            }
-            
-            // Append to existing file
-            File::append($bladePath, "\n" . $stub);
-            $this->command->info("Top nav link appended to Blade component's view: {$bladePath}");
-        } else {
-            // Create new file with a proper structure
-            $content = "{{-- Top Nav Links for {$module} --}}\n\n";
-            $content .= $stub;
-            File::put($bladePath, $content);
-            $this->command->info("Top bar Blade component created: {$bladePath}");
+    if (!File::exists(dirname($bladePath))) {
+        File::makeDirectory(dirname($bladePath), 0755, true);
+    }
+    
+    $stub = $this->getTopBarLinksStub($module, $modelName, $modelData);
+    
+    // Create pre/post links files if they don't exist
+    $preLinksPath = app_path("Modules/".ucfirst($module)."/Resources/views/components/layouts/navbars/auth/top-nav-pre-links.blade.php");
+    $postLinksPath = app_path("Modules/".ucfirst($module)."/Resources/views/components/layouts/navbars/auth/top-nav-post-links.blade.php");
+    
+    // Generate the dashboard link for this module
+    $dashboardLink = '<li class="nav-item">
+    <a href="/'.strtolower($module).'/dashboard"
+        class="nav-link ">
+        <i class="fas fa-dashboard" aria-hidden="true"></i>
+        <span>Dashboard</span>
+    </a>
+</li>';
+    
+    // Create or update pre-links file with dashboard link
+    if (!File::exists($preLinksPath)) {
+        $preLinksContent = "{{-- Pre-links section for {$module} --}}\n";
+        $preLinksContent .= $dashboardLink . "\n";
+        File::put($preLinksPath, $preLinksContent);
+        $this->command->info("Pre-links file created with dashboard: {$preLinksPath}");
+    } else {
+        // Check if dashboard link already exists in pre-links
+        $existingPreContent = File::get($preLinksPath);
+        if (!str_contains($existingPreContent, $dashboardLink)) {
+            // Add dashboard link at the beginning
+            $newPreContent = "{{-- Pre-links section for {$module} --}}\n";
+            $newPreContent .= $dashboardLink . "\n";
+            $newPreContent .= $existingPreContent;
+            File::put($preLinksPath, $newPreContent);
+            $this->command->info("Dashboard link added to pre-links: {$preLinksPath}");
         }
     }
+    
+    if (!File::exists($postLinksPath)) {
+        File::put($postLinksPath, "{{-- Post-links section for {$module} --}}\n");
+        $this->command->info("Post-links file created: {$postLinksPath}");
+    }
+    
+    $preLinksInclude = "@include('{$module}.views::components.layouts.navbars.auth.top-nav-pre-links')";
+    $postLinksInclude = "@include('{$module}.views::components.layouts.navbars.auth.top-nav-post-links')";
+    
+    // Build or rebuild the content
+    $existingStubs = [];
+    
+    if (File::exists($bladePath)) {
+        $existingContent = File::get($bladePath);
+        
+        if (str_contains($existingContent, $stub)) {
+            $this->command->info("Top nav link already exists in Blade component: {$bladePath}");
+            return;
+        }
+        
+        // Extract existing stubs (content between pre and post includes)
+        $pattern = '/'.preg_quote($preLinksInclude, '/').'(.*?)'.preg_quote($postLinksInclude, '/').'/s';
+        if (preg_match($pattern, $existingContent, $matches)) {
+            $existingStubs = array_filter(explode("\n", trim($matches[1])));
+        }
+    }
+    
+    // Add the new stub to existing stubs
+    $existingStubs[] = $stub;
+    
+    // Build the complete content
+    $content = "{{-- Top Nav Links for {$module} --}}\n\n";
+    $content .= $preLinksInclude . "\n\n";
+    $content .= "{{-- Generated Links --}}\n";
+    $content .= implode("\n", $existingStubs) . "\n\n";
+    $content .= $postLinksInclude . "\n";
+    
+    File::put($bladePath, $content);
+    $this->command->info("Top bar Blade component " . (File::exists($bladePath) ? 'updated' : 'created') . ": {$bladePath}");
+}
+    
+
+
+    
 
     /**
      * Get the Blade stub for top nav links.

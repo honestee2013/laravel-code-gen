@@ -120,22 +120,16 @@ class BladeGenerator extends Command
             File::makeDirectory(dirname($viewPath), 0755, true);
         }
         
-        $context = "people";
 
     $stub = "<x-qf::livewire.bootstrap.layouts.app>
     <x-slot name=\"topNav\">
         <livewire:qf::layouts.navs.top-nav moduleName=\"$module\">
     </x-slot>
 
-    <x-slot name=\"sidebar\">
-        <livewire:qf::layouts.navs.sidebar context=\"$context\"  moduleName=\"$module\">
-    </x-slot>
 
-    <x-slot name=\"bottomBar\">
-        <livewire:qf::layouts.navs.bottom-bar context=\"$context\" moduleName=\"$module\">
-    </x-slot>
 
     <livewire:qf::dashboards.dashboard-manager moduleName=\"$module\" />
+
 </x-qf::livewire.bootstrap.layouts.app>";
         File::put($viewPath, $stub);
         
