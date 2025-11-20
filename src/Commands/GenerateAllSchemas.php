@@ -32,13 +32,18 @@ class GenerateAllSchemas extends Command
     // Define strict module execution order
     protected $modules = [
         'System' => [],
+        'Admin' => [
+            'context_users_and_permissions.yaml',
+            'context_system_settings.yaml'
+        ],
         //'Organization' => [],
         //'User' => ['user_management.yaml', 'user_status_management.yaml'],
         'Hr' =>  [
-            'context_settings.yaml',            
             'context_people.yaml',
             'context_payroll.yaml',
             'context_time.yaml',
+            'context_settings.yaml',            
+
             /*'employee_management.yaml',
             //'onboarding_and_employee_lifecycle.yaml',
 

@@ -121,14 +121,28 @@ protected function generateBladeComponent($module, $modelName, $modelData)
     $preLinksPath = app_path("Modules/".ucfirst($module)."/Resources/views/components/layouts/navbars/auth/top-nav-pre-links.blade.php");
     $postLinksPath = app_path("Modules/".ucfirst($module)."/Resources/views/components/layouts/navbars/auth/top-nav-post-links.blade.php");
     
-    // Generate the dashboard link for this module
-    $dashboardLink = '<li class="nav-item">
-    <a href="/'.strtolower($module).'/dashboard"
-        class="nav-link ">
-        <i class="fas fa-dashboard" aria-hidden="true"></i>
-        <span>Dashboard</span>
+
+    // Generate the dashboard link for this module (with active state support)
+    $dashboardPath = strtolower($module) . '/dashboard';
+    $dashboardLink = <<<HTML
+    <a href="/admin/dashboard" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 m-0 mt-2 me-2" style="height:2.2em"
+            >
+        <i class="fas fa-cogs"></i>
+        <span >Admin</span>
     </a>
-</li>';
+    <li class="nav-item ms-4">
+        <a href="/{$dashboardPath}"
+            class="nav-link @if(request()->is('{$dashboardPath}') || request()->is('{$dashboardPath}/*')) fw-bold text-primary @endif">
+            @if(request()->is('{$dashboardPath}') || request()->is('{$dashboardPath}/*'))
+                <i class="fas fa-tachometer-alt" aria-hidden="true"></i>
+            @endif
+            <span>Dashboard</span>
+        </a>
+    </li>
+    HTML;
+
+
+
     
     // Create or update pre-links file with dashboard link
     if (!File::exists($preLinksPath)) {
@@ -201,38 +215,39 @@ protected function generateBladeComponent($module, $modelName, $modelData)
      * @param array $modelData
      * @return string
      */
-    protected function getTopBarLinksStub($module, $modelName, $modelData)
-    {
-        $topNav = $modelData['topNav'] ?? [];
-        $iconClasses = $topNav['iconClasses'] ?? $modelData['iconClasses'] ?? 'fas fa-user';
-        
-        $url = $topNav['url'] ?? Str::plural(str_replace('_', '-', Str::snake($modelName)));
-        $title = $topNav['title'] ?? Str::title(str_replace('_', ' ', Str::plural(Str::snake($modelName))));
-        $permission = $topNav['permission'] ?? 'view_' . Str::snake($modelName);
+protected function getTopBarLinksStub($module, $modelName, $modelData)
+{
+    $topNav = $modelData['topNav'] ?? [];
+    $iconClasses = $topNav['iconClasses'] ?? $modelData['iconClasses'] ?? 'fas fa-user';
+    
+    $url = $topNav['url'] ?? Str::plural(str_replace('_', '-', Str::snake($modelName)));
+    $title = $topNav['title'] ?? Str::title(str_replace('_', ' ', Str::plural(Str::snake($modelName))));
+    $permission = $topNav['permission'] ?? 'view_' . Str::snake($modelName);
 
-        $topNav = $modelData['topNav'] ?? [];
-        $context = $topNav['context']?? $title; // Default to title if context not provided
-        $context = ucfirst($context); // Capitalize first letter
-        
+    $context = $topNav['context'] ?? $title;
+    $context = ucfirst($context);
+
+    // Build the full path for matching (without leading slash for request()->is())
+    $fullPath = "{$module}/{$url}";
+
     return <<<BLADE
 <li class="nav-item">
-    <a href="/{$module}/{$url}"
-        class="nav-link ">
-        <i class="fas {$iconClasses}" aria-hidden="true"></i>
+    <a href="/{$fullPath}"
+        class="nav-link @if(request()->is('{$fullPath}') || request()->is('{$fullPath}/*')) fw-bold text-primary @endif">
+        @if(request()->is('{$fullPath}') || request()->is('{$fullPath}/*')) 
+            <i class="fas {$iconClasses}" aria-hidden="true"></i> 
+        @endif
         <span>{$context}</span>
     </a>
 </li>
 BLADE;
+}
 
 
-        /*return <<<BLADE
-@if(auth()->user()?->can('{$permission}'))
-    <x-core.views::layouts.navbars.top-bar-link-item
-        iconClasses="{$iconClasses} top-bar-icon"
-        url="{$module}/{$url}"
-        title="{$title}"
-    />
-@endif
-BLADE;*/
-    }
+
+
+
+
+
+
 }

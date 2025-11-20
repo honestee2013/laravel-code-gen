@@ -156,47 +156,99 @@ class SidebarLinksGenerator extends BaseLinksGenerator
      * @param array $modelData
      * @return void
      */
-    protected function generateBladeComponent($module, $modelName, $modelData)
-    {
-        $sidebar = $modelData['sidebar'] ?? [];
-        
-        // Only generate Blade component if explicitly requested
-        /*if (!($sidebar['generateBlade'] ?? false)) {
-            return;
-        }*//////////
-        
-        $context = strtolower($sidebar['context'])?? ''; // make context folder lowercase
-        $context = $context? $context."/": '';
-        $fileName = $context."sidebar-links.blade.php";
+protected function generateBladeComponent($module, $modelName, $modelData)
+{
+    $sidebar = $modelData['sidebar'] ?? [];
 
-        $bladePath = app_path("Modules/{$module}/Resources/views/components/layouts/navbars/auth/$fileName");
-        
-        if (!File::exists(dirname($bladePath))) {
-            File::makeDirectory(dirname($bladePath), 0755, true);
-        }
-        
-        $stub = $this->getSidebarLinksStub($module, $modelName, $modelData);
-        
-        // Check if the file already exists
-        if (File::exists($bladePath)) {
-            $existingContent = File::get($bladePath);
-            
-            if (str_contains($existingContent, $stub)) {
-                $this->command->info("Sidebar link already exists in Blade component: {$bladePath}");
-                return;
-            }
-            
-            // Append to existing file
-            File::append($bladePath, "\n" . $stub);
-            $this->command->info("Sidebar link appended to Blade component: {$bladePath}");
-        } else {
-            // Create new file with a proper structure
-            $content = "{{-- Sidebar Links for {$module} --}}\n\n";
-            $content .= $stub;
-            File::put($bladePath, $content);
-            $this->command->info("Sidebar Blade component created: {$bladePath}");
+    $context = strtolower($sidebar['context'] ?? '');
+    $contextPath = $context ? $context . '/' : '';
+    $fileName = $contextPath . 'sidebar-links.blade.php';
+
+    $bladePath = app_path("Modules/{$module}/Resources/views/components/layouts/navbars/auth/{$fileName}");
+
+    if (!File::exists(dirname($bladePath))) {
+        File::makeDirectory(dirname($bladePath), 0755, true);
+    }
+
+    $stub = $this->getSidebarLinksStub($module, $modelName, $modelData);
+
+    // Define pre/post sidebar link paths
+    $preLinksPath = app_path("Modules/{$module}/Resources/views/components/layouts/navbars/auth/{$contextPath}sidebar-pre-links.blade.php");
+    $postLinksPath = app_path("Modules/{$module}/Resources/views/components/layouts/navbars/auth/{$contextPath}sidebar-post-links.blade.php");
+
+    // Generate dashboard link (same as top bar)
+    $dashboardPath = strtolower($module) . '/dashboard';
+    $dashboardLink = <<<HTML
+<li class="nav-item">
+    <a href="/{$dashboardPath}"
+        class="nav-link @if(request()->is('{$dashboardPath}') || request()->is('{$dashboardPath}/*')) fw-bold text-primary @endif">
+        @if(request()->is('{$dashboardPath}') || request()->is('{$dashboardPath}/*'))
+            <i class="fas fa-tachometer-alt" aria-hidden="true"></i>
+        @endif
+        <span>Dashboard</span>
+    </a>
+</li>
+HTML;
+
+$dashboardLink = ""; // For now there is no need to add the dashboard link the sidebar. It is on the topbar already
+
+    // Handle pre-links file (with dashboard)
+    if (!File::exists($preLinksPath)) {
+        $preLinksContent = "{{-- Pre-links section for {$module} sidebar --}}\n";
+        $preLinksContent .= $dashboardLink . "\n";
+        File::put($preLinksPath, $preLinksContent);
+        $this->command->info("Sidebar pre-links file created with dashboard: {$preLinksPath}");
+    } else {
+        $existingPreContent = File::get($preLinksPath);
+        if (!str_contains($existingPreContent, $dashboardLink)) {
+            $newPreContent = "{{-- Pre-links section for {$module} sidebar --}}\n";
+            $newPreContent .= $dashboardLink . "\n";
+            $newPreContent .= $existingPreContent;
+            File::put($preLinksPath, $newPreContent);
+            $this->command->info("Dashboard link added to sidebar pre-links: {$preLinksPath}");
         }
     }
+
+    // Ensure post-links file exists
+    if (!File::exists($postLinksPath)) {
+        File::put($postLinksPath, "{{-- Post-links section for {$module} sidebar --}}\n");
+        $this->command->info("Sidebar post-links file created: {$postLinksPath}");
+    }
+
+    // Build include statements
+    $viewPrefix = "{$module}.views::components.layouts.navbars.auth.{$contextPath}";
+    $preLinksInclude = "@include('{$viewPrefix}sidebar-pre-links')";
+    $postLinksInclude = "@include('{$viewPrefix}sidebar-post-links')";
+
+    // Extract or initialize existing generated links
+    $existingStubs = [];
+    if (File::exists($bladePath)) {
+        $existingContent = File::get($bladePath);
+        if (str_contains($existingContent, $stub)) {
+            $this->command->info("Sidebar link already exists in Blade component: {$bladePath}");
+            return;
+        }
+
+        // Extract content between pre and post includes
+        $pattern = '/' . preg_quote($preLinksInclude, '/') . '\s*(.*?)\s*' . preg_quote($postLinksInclude, '/') . '/s';
+        if (preg_match($pattern, $existingContent, $matches)) {
+            $existingStubs = array_filter(array_map('trim', explode("\n", $matches[1])));
+        }
+    }
+
+    // Add new stub
+    $existingStubs[] = trim($stub);
+
+    // Build final content
+    $content = "{{-- Sidebar Links for {$module} --}}\n\n";
+    $content .= $preLinksInclude . "\n\n";
+    $content .= "{{-- Generated Links --}}\n";
+    $content .= implode("\n", $existingStubs) . "\n\n";
+    $content .= $postLinksInclude . "\n";
+
+    File::put($bladePath, $content);
+    $this->command->info("Sidebar Blade component " . (File::exists($bladePath) ? 'updated' : 'created') . ": {$bladePath}");
+}
 
     /**
      * Get the Blade stub for sidebar links.
