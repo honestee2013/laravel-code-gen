@@ -40,8 +40,10 @@ class GenerateFromSchema extends Command
         // Generate model-related files
         foreach ($schema['models'] as $modelName => $modelData) {
             $module = $modelData['module'];
+            $addMigration = $modelData['addMigration']?? true;
 
-            (new MigrationGenerator($this))->generateMigration($module, $modelName, $modelData);
+            if ($addMigration)
+                (new MigrationGenerator($this))->generateMigration($module, $modelName, $modelData);
             (new ModelGenerator($this))->generateModel($module, $modelName, $modelData);
             (new ConfigGenerator($this))->generateConfigFile($module, $modelName, $modelData);
             (new BladeGenerator($this))->generateBladeFile($module, $modelName, $modelData);
