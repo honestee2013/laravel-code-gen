@@ -327,7 +327,9 @@ HTML;
         $pageTitle = $this->getPageTitle($modelName, $modelData);
         $hiddenFields = $this->getHiddenFields($modelData);
         $queryFilters = $this->getQueryFilters($modelData);
-        
+       
+        $module = ucfirst($module);
+
 return 
 <<<HTML
 <livewire:qf::data-tables.data-table-manager :selectedItemId="\$id??null" model="App\\Modules\\{$module}\\Models\\{$modelName}"
