@@ -165,7 +165,7 @@ class BladeGenerator extends Command
             ////// New view layout essentials /////
             '{{sidebar}}' => $this->getSidebar($module, $modelData),
             '{{topNav}}' => $this->getTopNav($module, $modelData),
-            '{{bottomBar}}' => $this->getBottomBar($module, $modelData),
+            '{{bottomBar}}' => '', //$this->getBottomBar($module, $modelData),
             '{{pageContext}}' => ucfirst($this->getPageContext($modelName, $modelData)),
             '{{livewireComponent}}' => $this->getLivewireComponent($module, $modelName, $modelData),
 
