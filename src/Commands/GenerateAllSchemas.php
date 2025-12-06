@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\File;
 
 class GenerateAllSchemas extends Command
 {
-    protected $signature = 'app:generate-all-schemas {--modules= : List of comma separated modules}  {--basePath= : Source directory. default to App/Modules/System/Yamls/Modules}';
+    protected $signature = 'quickerfaster:generate-all {--modules= : List of comma separated modules}  {--basePath= : Source directory. default to App/Modules/System/Yamls/Modules}';
     protected $description = 'Generate schemas from YAML files in a sequential order';
 
 
