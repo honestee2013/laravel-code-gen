@@ -31,10 +31,10 @@ class GenerateAllSchemas extends Command
 
     // Define strict module execution order
     protected $modules = [
-        'System' => [],
+        //'System' => [],
         'Admin' => [
             'context_users_and_permissions.yaml',
-            'context_system_settings.yaml'
+            // 'context_system_settings.yaml'
         ],
         //'Organization' => [],
         //'User' => ['user_management.yaml', 'user_status_management.yaml'],
@@ -42,8 +42,10 @@ class GenerateAllSchemas extends Command
             'context_settings.yaml',            
             'context_people.yaml',
             'context_payroll.yaml',
+            'context_leave.yaml',
             'context_time.yaml',
-
+            'dashboards.yaml',
+            'wizards.yaml',
             /*'employee_management.yaml',
             //'onboarding_and_employee_lifecycle.yaml',
 

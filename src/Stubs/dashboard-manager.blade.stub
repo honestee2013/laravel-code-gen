@@ -68,6 +68,48 @@
         @endforeach
     </div>
 
+
+    {{-- Balance Card Widgets --}}
+    <div class="row g-4 mb-4">
+            @foreach($widgetsConfig as $widgetId => $config)
+                @if($config['type'] === 'balance-card')
+                    <div class="{{ $config['size'] ?? 'col-12 col-sm-6 col-lg-3' }}">
+                        <livewire:qf::widgets.cards.balance-card-widget
+                            :widgetId="$widgetId"
+                            :config="$config"
+                            :key="'balance-'.$widgetId"
+                        />
+                    </div>
+                @endif
+            @endforeach
+
+            @foreach($widgetsConfig as $widgetId => $config)
+                @if($config['type'] === 'status-card')
+                    <div class="{{ $config['size'] ?? 'col-12 col-sm-6 col-lg-3' }}">
+                        <livewire:qf::widgets.cards.status-card-widget
+                            :widgetId="$widgetId"
+                            :config="$config"
+                            :key="'status-'.$widgetId"
+                        />
+                    </div>
+                @endif
+            @endforeach
+
+            @foreach($widgetsConfig as $widgetId => $config)
+                @if($config['type'] === 'action-card')
+                    <div class="{{ $config['size'] ?? 'col-12 col-sm-6 col-lg-3' }}">
+                        <livewire:qf::widgets.cards.action-card-widget
+                            :widgetId="$widgetId"
+                            :config="$config"
+                            :key="'action-'.$widgetId"
+                        />
+                    </div>
+                @endif
+            @endforeach
+    </div>
+
+
+
     {{-- Progress Bar Widgets --}}
     <div class="row g-4 mb-4">
         @foreach($widgetsConfig as $widgetId => $config)

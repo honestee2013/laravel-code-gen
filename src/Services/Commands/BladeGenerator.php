@@ -7,11 +7,11 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
-
+use QuickerFaster\CodeGen\Traits\CanGenerateDashboard;
 class BladeGenerator extends Command
 {
 
-
+    use CanGenerateDashboard;
     public function __construct($command = null)
     {
         parent::__construct();
@@ -42,8 +42,8 @@ class BladeGenerator extends Command
                 $this->generateStandardView($module, $modelName, $modelData);
             }
 
-            // Always add dashboard blade view
-            $this->generateDashboardView($module, $modelName, $modelData);
+            // Always add a default dashboard blade view
+            $this->generateDashboardView("dashboard", $module);
 
         } catch (Exception $e) {
             $this->command->error("Failed to generate blade file: {$e->getMessage()}");
@@ -108,34 +108,6 @@ class BladeGenerator extends Command
         
         $this->command->info("Blade view created: {$viewPath}");
     }
-
-
-
-
-    protected function generateDashboardView($module, $modelName, $modelData) {
-        $viewPath = app_path("Modules/".ucfirst($module)."/Resources/views/dashboard.blade.php");
-        
-        // Create directory if it doesn't exist
-        if (!File::exists(dirname($viewPath))) {
-            File::makeDirectory(dirname($viewPath), 0755, true);
-        }
-        
-
-    $stub = "<x-qf::livewire.bootstrap.layouts.app>
-    <x-slot name=\"topNav\">
-        <livewire:qf::layouts.navs.top-nav moduleName=\"$module\">
-    </x-slot>
-
-
-
-    <livewire:qf::dashboards.dashboard-manager moduleName=\"$module\" />
-
-</x-qf::livewire.bootstrap.layouts.app>";
-        File::put($viewPath, $stub);
-        
-        $this->command->info("Dashboard blade view created: {$viewPath}");
-    }
-
 
 
 
@@ -409,7 +381,7 @@ HTML;
 
         
         $sidebar = $modelData['sidebar'] ?? [];
-        $context = strtolower($sidebar['context'])?? ''; // make context folder lowercase
+        $context = strtolower($sidebar['context']?? ''); // make context folder lowercase
 
 
 return <<<HTML
@@ -444,7 +416,7 @@ HTML;*/
         }
 
         $sidebar = $modelData['sidebar'] ?? []; // Bottom bar context should match sidebar context
-        $context = strtolower($sidebar['context'])?? ''; // make context folder lowercase
+        $context = strtolower($sidebar['context']?? ''); // make context folder lowercase
 
 
 

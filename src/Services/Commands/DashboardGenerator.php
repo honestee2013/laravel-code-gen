@@ -6,8 +6,13 @@ use Illuminate\Support\Str;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 
+use QuickerFaster\CodeGen\Traits\CanGenerateDashboard;
+
 class DashboardGenerator extends Command
 {
+
+    use CanGenerateDashboard;
+
     public function __construct($command = null)
     {
         parent::__construct();
@@ -18,65 +23,71 @@ class DashboardGenerator extends Command
         }
     }
 
-// In DashboardGenerator.php - add this method
-protected function generateDefaultDashboardConfig($module, $schema)
-{
-    $configPath = app_path("Modules/{$module}/Data/dashboards");
-    if (!File::exists($configPath)) {
-        File::makeDirectory($configPath, 0755, true);
-    }
-
-    // Create default.php that includes the first dashboard
-    $firstDashboard = collect($schema['dashboards'] ?? [])->first();
-    
-    if ($firstDashboard) {
-        $defaultConfig = [
-            'title' => $firstDashboard['title'] ?? 'Dashboard',
-            'description' => $firstDashboard['description'] ?? '',
-            'widgets' => $this->processDashboardWidgets($firstDashboard['widgets'] ?? [], $schema),
-        ];
-
-        $content = "<?php\n\nreturn " . var_export($defaultConfig, true) . ";\n";
-        File::put("{$configPath}/default.php", $content);
-        $this->command->info("Default dashboard config created: {$configPath}/default.php");
-    }
-}
-
-// Update generateDashboards method to call this
-public function generateDashboards($schemaFile, $schema)
-{
-    if (empty($schema['dashboards'])) {
-        return;
-    }
-
-    $modulesUsed = [];
-
-    foreach ($schema['dashboards'] as $dashboardId => $dashboardData) {
-        $targetModule = $this->resolveDashboardModule($dashboardId, $dashboardData, $schema);
-        
-        if (!$targetModule) {
-            $this->command->error("Could not determine module for dashboard: {$dashboardId}. Add 'module: your_module' to dashboard config.");
-            continue;
-        }
-
-        $modulesUsed[] = $targetModule;
-
-        $configPath = app_path("Modules/{$targetModule}/Data/dashboards");
+    // In DashboardGenerator.php - add this method
+    protected function generateDefaultDashboardConfig($module, $schema)
+    {
+        $configPath = app_path("Modules/{$module}/Data/dashboards");
         if (!File::exists($configPath)) {
             File::makeDirectory($configPath, 0755, true);
         }
 
-        $this->generateDashboardConfig($dashboardId, $dashboardData, $configPath, $schema);
-        $this->generateDashboardManagerView($dashboardId, $dashboardData, $targetModule);
+        // Create default.php that includes the first dashboard
+        $firstDashboard = collect($schema['dashboards'] ?? [])->first();
 
-        $this->command->info("Dashboard '{$dashboardId}' generated in module '{$targetModule}'");
+        if ($firstDashboard) {
+            $defaultConfig = [
+                'title' => $firstDashboard['title'] ?? 'Dashboard',
+                'description' => $firstDashboard['description'] ?? '',
+                'widgets' => $this->processDashboardWidgets($firstDashboard['widgets'] ?? [], $schema),
+            ];
+
+            $content = "<?php\n\nreturn " . var_export($defaultConfig, true) . ";\n";
+            File::put("{$configPath}/default.php", $content);
+            $this->command->info("Default dashboard config created: {$configPath}/default.php");
+        }
     }
 
-    // Create default dashboard files for each module used
-    foreach (array_unique($modulesUsed) as $module) {
-        $this->generateDefaultDashboardConfig($module, $schema);
+    // Update generateDashboards method to call this
+    public function generateDashboards($schemaFile, $schema)
+    {
+
+        if (!isset($schema['dashboards'])) {
+            return;
+        }
+
+        $modulesUsed = [];
+
+        foreach ($schema['dashboards'] as $dashboardId => $dashboardData) {
+            $targetModule = $this->resolveDashboardModule($dashboardId, $dashboardData, $schema);
+
+            if (!$targetModule) {
+                $this->command->error("Could not determine module for dashboard: {$dashboardId}. Add 'module: your_module' to dashboard config.");
+                continue;
+            }
+
+            $modulesUsed[] = $targetModule;
+            $targetModule = ucfirst($targetModule);
+            $configPath = app_path("Modules/{$targetModule}/Data/dashboards");
+            if (!File::exists($configPath)) {
+                File::makeDirectory($configPath, 0755, true);
+            }
+
+            $this->generateDashboardConfig($dashboardId, $dashboardData, $configPath, $schema);
+            $this->generateDashboardView($dashboardId, $targetModule);
+            $this->generateDashboardManagerView($dashboardId, $dashboardData, $targetModule);
+
+            $this->command->info("Dashboard '{$dashboardId}' generated in module '{$targetModule}'");
+        }
+
+        // Create default dashboard files for each module used
+        foreach (array_unique($modulesUsed) as $module) {
+            $this->generateDefaultDashboardConfig($module, $schema);
+        }
     }
-}
+
+
+
+
 
     protected function resolveDashboardModule($dashboardId, $dashboardData, $schema)
     {
@@ -102,7 +113,7 @@ public function generateDashboards($schemaFile, $schema)
         }
 
         $uniqueModules = array_unique($modules);
-        
+
         if (count($uniqueModules) === 1) {
             return $uniqueModules[0];
         }
@@ -115,11 +126,11 @@ public function generateDashboards($schemaFile, $schema)
     {
         $parts = explode('\\', $fqcn);
         $modulesIndex = array_search('Modules', $parts);
-        
+
         if ($modulesIndex === false || !isset($parts[$modulesIndex + 1])) {
             return null;
         }
-        
+
         $moduleName = $parts[$modulesIndex + 1];
         return Str::camel($moduleName);
     }
@@ -127,7 +138,7 @@ public function generateDashboards($schemaFile, $schema)
     protected function generateDashboardConfig($dashboardId, $dashboardData, $configPath, $schema)
     {
         $filePath = "{$configPath}/{$dashboardId}.php";
-        
+
         $configData = [
             'title' => $dashboardData['title'] ?? Str::title(str_replace('_', ' ', $dashboardId)),
             'description' => $dashboardData['description'] ?? '',
@@ -141,14 +152,14 @@ public function generateDashboards($schemaFile, $schema)
 
         $content = "<?php\n\nreturn " . var_export($configData, true) . ";\n";
         File::put($filePath, $content);
-        
+
         $this->command->info("Dashboard config created: {$filePath}");
     }
 
     protected function processDashboardWidgets($widgets, $schema)
     {
         $processedWidgets = [];
-        
+
         foreach ($widgets as $widgetId => $widgetConfig) {
             $processedWidgets[$widgetId] = $this->processWidgetConfig($widgetConfig, $schema);
         }
@@ -242,6 +253,10 @@ public function generateDashboards($schemaFile, $schema)
             $processed['color'] = $widgetConfig['color'];
         }
 
+
+        // merge the rest of the config as-is
+        $processed = array_merge($processed, array_diff_key($widgetConfig, $processed));
+
         return $processed;
     }
 
@@ -251,22 +266,22 @@ public function generateDashboards($schemaFile, $schema)
         if (strpos($modelName, '\\') !== false) {
             return $modelName;
         }
-        
+
         // Resolve from schema
         if (isset($schema['models'][$modelName]['module'])) {
             $module = $schema['models'][$modelName]['module'];
             $ucModule = ucfirst($module);
             return "App\\Modules\\{$ucModule}\\Models\\{$modelName}";
         }
-        
+
         // Fallback
         return "App\\Models\\{$modelName}";
     }
 
     protected function generateDashboardManagerView($dashboardId, $dashboardData, $targetModule)
     {
-        $viewName = 'dashboard-manager';
-        $viewPath = app_path("Modules/{$targetModule}/Resources/views/{$viewName}.blade.php");
+        $viewName = str_replace('_', '-', $dashboardId);
+        $viewPath = app_path("Modules/{$targetModule}/Resources/views/dashboard-managers/{$viewName}.blade.php");
 
         // Ensure directory exists
         if (!File::exists(dirname($viewPath))) {
@@ -281,19 +296,19 @@ public function generateDashboards($schemaFile, $schema)
 
 
 
-protected function getDashboardManagerStub($dashboardId, $module, $dashboardData)
-{
-    // Check for stub file first
-    $stubPath = __DIR__ . '/../../Stubs/dashboard-manager.blade.stub';
-    
-    if (File::exists($stubPath)) {
-        $stub = File::get($stubPath);
-        return str_replace('{{ $title }}', $dashboardData['title'] ?? 'Dashboard', $stub);
+    protected function getDashboardManagerStub($dashboardId, $module, $dashboardData)
+    {
+        // Check for stub file first
+        $stubPath = __DIR__ . '/../../Stubs/dashboard-manager.blade.stub';
+
+        if (File::exists($stubPath)) {
+            $stub = File::get($stubPath);
+            return str_replace('{{ $title }}', $dashboardData['title'] ?? 'Dashboard', $stub);
+        }
+
+        // Fallback to inline template (the fixed version above)
+        return $this->getInlineDashboardStub($dashboardId, $module, $dashboardData);
     }
-    
-    // Fallback to inline template (the fixed version above)
-    return $this->getInlineDashboardStub($dashboardId, $module, $dashboardData);
-}
 
 
 

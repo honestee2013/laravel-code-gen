@@ -37,19 +37,23 @@ class GenerateFromSchema extends Command
 
         $schema = Yaml::parseFile($schemaFile);
 
-        // Generate model-related files
-        foreach ($schema['models'] as $modelName => $modelData) {
-            $module = $modelData['module'];
-            $addMigration = $modelData['addMigration']?? true;
 
-            if ($addMigration)
-                (new MigrationGenerator($this))->generateMigration($module, $modelName, $modelData);
-            (new ModelGenerator($this))->generateModel($module, $modelName, $modelData);
-            (new ConfigGenerator($this))->generateConfigFile($module, $modelName, $modelData);
-            (new BladeGenerator($this))->generateBladeFile($module, $modelName, $modelData);
-            (new SidebarLinksGenerator($this))->generateSidebarLinks($module, $modelName, $modelData);
-            (new TopBarLinksGenerator($this))->generateTopBarLinks($module, $modelName, $modelData);
-            (new BottomBarLinksGenerator($this))->generateBottomBarLinks($module, $modelName, $modelData);
+        if (isset($schema['models']) && !empty($schema['models'])) {
+            // Generate model-related files
+            foreach ($schema['models'] as $modelName => $modelData) {
+                $module = $modelData['module'];
+                $addMigration = $modelData['addMigration']?? true;
+
+                if ($addMigration) {
+                    (new MigrationGenerator($this))->generateMigration($module, $modelName, $modelData);
+                }
+                (new ModelGenerator($this))->generateModel($module, $modelName, $modelData);
+                (new ConfigGenerator($this))->generateConfigFile($module, $modelName, $modelData);
+                (new BladeGenerator($this))->generateBladeFile($module, $modelName, $modelData);
+                (new SidebarLinksGenerator($this))->generateSidebarLinks($module, $modelName, $modelData);
+                (new TopBarLinksGenerator($this))->generateTopBarLinks($module, $modelName, $modelData);
+                (new BottomBarLinksGenerator($this))->generateBottomBarLinks($module, $modelName, $modelData);
+            }
         }
 
         // Generate wizards (NEW)
