@@ -401,6 +401,8 @@ class ModelGenerator extends Command
         $methods = '';
         
         foreach ($relations as $relationName => $relationData) {
+            if (isset($relationData["addToModel"]) && !$relationData["addToModel"])
+                continue;
             $methods .= $this->generateRelationMethod($relationName, $relationData) . "\n\n";
         }
         
@@ -982,8 +984,10 @@ protected function getExtends($modelName, $modelData)
     if (is_array($extends)) {
         $extends = end($extends);
     }
-    
-    return class_basename($extends);
+
+    $className = class_basename(Str::afterLast($extends, ' As '));
+    return $className;
+   
 }
 
 /**

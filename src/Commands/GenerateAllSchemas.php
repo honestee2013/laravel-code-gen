@@ -39,11 +39,18 @@ class GenerateAllSchemas extends Command
         //'Organization' => [],
         //'User' => ['user_management.yaml', 'user_status_management.yaml'],
         'Hr' =>  [
-            'context_settings.yaml',            
+            'context_settings.yaml',  
+            'dependencies.yaml',
+
+            'context_policies.yaml',            
+
             'context_people.yaml',
+
             'context_payroll.yaml',
             'context_leave.yaml',
+            
             'context_time.yaml',
+
             'dashboards.yaml',
             'wizards.yaml',
             /*'employee_management.yaml',

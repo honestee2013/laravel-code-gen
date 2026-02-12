@@ -304,6 +304,16 @@ class ConfigGenerator extends Command
             $definition['wizard'] = $field['wizard'];
         }
 
+
+        // Add the field to the definitions
+        foreach ($field as $key => $value) {
+            if (!in_array($key, ['type', 'label', 'validation', 'options', 'autoGenerate', 'multiSelect', 'reactivity', 'foreign', 'wizard', 'partial', 'display'])) {
+                $definition[$key] = $value;
+            }
+        }
+
+
+
         return $definition;
     }
 
