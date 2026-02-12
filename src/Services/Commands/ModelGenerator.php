@@ -94,7 +94,7 @@ class ModelGenerator extends Command
             '{{rules}}' => $this->getRules($modelData),
             '{{messages}}' => $this->getMessages($modelData),
             '{{bootMethods}}' => $this->getBootMethods($modelData),
-            '{{relations}}' => $this->getRelationMethods($modelData),
+            '{{relations}}' => $this->getRelationMethods($modelData, $modelName),
             '{{imports}}' => $this->getImports($modelData),
             '{{traitImports}}' => $this->getTraitImports($modelData),
             '{{traitUses}}' => $this->getTraitUses($modelData),
@@ -395,7 +395,7 @@ class ModelGenerator extends Command
      * @param array $modelData
      * @return string
      */
-    protected function getRelationMethods($modelData)
+    protected function getRelationMethods($modelData, $modelName)
     {
         $relations = $modelData['relations'] ?? [];
         $methods = '';
@@ -403,7 +403,7 @@ class ModelGenerator extends Command
         foreach ($relations as $relationName => $relationData) {
             if (isset($relationData["addToModel"]) && !$relationData["addToModel"])
                 continue;
-            $methods .= $this->generateRelationMethod($relationName, $relationData) . "\n\n";
+            $methods .= $this->generateRelationMethod($relationName, $relationData, $modelName) . "\n\n";
         }
         
         return trim($methods);
@@ -416,7 +416,7 @@ class ModelGenerator extends Command
      * @param array $relationData
      * @return string
      */
-    protected function generateRelationMethod($relationName, $relationData)
+    protected function generateRelationMethod($relationName, $relationData, $modelName = '')
     {
         $type = $relationData['type'];
         $method = '';
@@ -435,7 +435,7 @@ class ModelGenerator extends Command
                 break;
                 
             case 'belongsToMany':
-                $method = $this->generateBelongsToManyMethod($relationName, $relationData);
+                $method = $this->generateBelongsToManyMethod($relationName, $relationData, $modelName);
                 break;
                 
             case 'morphTo':
@@ -539,26 +539,38 @@ METHOD;
      * @param array $relationData
      * @return string
      */
-    protected function generateBelongsToManyMethod($relationName, $relationData)
-    {
-        $relatedModel = $relationData['model'];
-        $table = $relationData['pivotTable'] ?? null;
-        $foreignPivotKey = $relationData['foreignPivotKey'] ?? Str::snake(class_basename($this)) . '_id';
-        $relatedPivotKey = $relationData['relatedPivotKey'] ?? Str::snake(class_basename($relatedModel)) . '_id';
-        $parentKey = $relationData['parentKey'] ?? 'id';
-        $relatedKey = $relationData['relatedKey'] ?? 'id';
-        
-        $method = "    public function $relationName()\n    {\n";
-        $method .= "        return \$this->belongsToMany(\\$relatedModel::class";
-        
-        if ($table) {
-            $method .= ", '$table'";
-        }
-        
-        $method .= ", '$foreignPivotKey', '$relatedPivotKey', '$parentKey', '$relatedKey');\n    }";
-        
-        return $method;
-    }
+
+protected function generateBelongsToManyMethod($relationName, $relationData, $modelName)
+{
+    $relatedModel    = $relationData['model'];
+    $pivotTable      = $relationData['pivotTable'] ?? null;
+    
+    // Pivot table keys (Arguments 3 and 4)
+    $foreignPivotKey = $relationData['foreignPivotKey'] ?? Str::snake(class_basename($modelName)) . '_id';
+    $relatedPivotKey = $relationData['relatedPivotKey'] ?? Str::snake(class_basename($relatedModel)) . '_id';
+    
+    // Actual model primary keys (Arguments 5 and 6)
+    // Note: In your data, these are 'foreignKey' and 'relatedKey'
+    $parentKey  = $relationData['foreignKey'] ?? 'id'; 
+    $relatedKey = $relationData['relatedKey'] ?? 'id';
+
+    $args = [
+        "\\$relatedModel::class",
+        $pivotTable ? "'$pivotTable'" : "null",
+        "'$foreignPivotKey'",
+        "'$relatedPivotKey'",
+        "'$parentKey'",
+        "'$relatedKey'"
+    ];
+
+    return "    public function $relationName()\n" .
+           "    {\n" .
+           "        return \$this->belongsToMany(" . implode(', ', $args) . ");\n" .
+           "    }";
+}
+
+
+
 
     /**
      * Generate a morphTo relationship method.
