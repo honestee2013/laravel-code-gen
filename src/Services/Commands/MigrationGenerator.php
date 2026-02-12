@@ -50,39 +50,57 @@ class MigrationGenerator extends Command
      * @param array $modelData
      * @return void
      */
-    protected function generatePivotMigrations($module, $modelName, $modelData)
-    {
-        if (!isset($modelData['relations'])) {
-            return;
-        }
+protected function generatePivotMigrations($module, $modelName, $modelData)
+{
+    if (!isset($modelData['relations'])) {
+        return;
+    }
 
-        foreach ($modelData['relations'] as $relationName => $relationData) {
-            switch ($relationData['type']) {
-                case 'belongsToMany':
-                    $model1 = Str::snake($modelName);
-                    $model2 = Str::snake(class_basename($relationData['model']));
+    foreach ($modelData['relations'] as $relationName => $relationData) {
+        switch ($relationData['type']) {
+            case 'belongsToMany':
+                $relatedModelClass = class_basename($relationData['model']);
+                
+                // 1. Correct Alphabetical Pivot Table Name
+                if (isset($relationData['pivotTable'])) {
+                    $pivotTableName = $relationData['pivotTable'];
+                } else {
+                    $names = [
+                        Str::snake($modelName),
+                        Str::snake($relatedModelClass)
+                    ];
+                    sort($names);
+                    $pivotTableName = implode('_', $names);
+                }
 
-                    $pivotTableName = $relationData['pivotTable'] ?? Str::singular(Str::lower($modelName)) . '_' . Str::singular(Str::lower(class_basename($relationData['model'])));
-                    $foreignKey1 = $relationData['relatedPivotKey'] ?? $model1.'_id';
-                    $foreignKey2 = $relationData['foreignPivotKey'] ?? $model2.'_id';
+                // 2. Correct Key Mapping
+                // foreignPivotKey = current model's ID on pivot
+                // relatedPivotKey = other model's ID on pivot
+                $foreignKey1 = $relationData['foreignPivotKey'] ?? Str::snake($modelName) . '_id';
+                $foreignKey2 = $relationData['relatedPivotKey'] ?? Str::snake($relatedModelClass) . '_id';
 
-                    $this->generatePivotMigration($module, $pivotTableName, $model1, $model2, $foreignKey1, $foreignKey2);
+                // Pass the correctly sorted table and mapped keys
+                $this->generatePivotMigration($module, $pivotTableName, $modelName, $relatedModelClass, $foreignKey1, $foreignKey2);
+                break;
+
+            case 'morphToMany':
+                $pivotTableName = $relationData['pivotTable'] ?? null;
+                if (!$pivotTableName) {
+                    $this->error("Pivot table name is required for morphToMany relation.");
                     break;
-
-                case 'morphToMany':
-                    $pivotTableName = $relationData['pivotTable'] ?? null;
-                    if (!$pivotTableName) {
-                        $this->error("Pivot table name is required for morphToMany relation.");
-                        break;
-                    }
-                    $foreignKey = $relationData['foreignKey'] ?? 'id';
-                    $relatedPivotKey = $relationData['relatedPivotKey'] ?? 'id';
-                    $morphType = $relationData['morphType'] ?? 'model_type';
-                    $this->generatePolymorphicPivotMigration($module, $pivotTableName, $modelName, $foreignKey, $relatedPivotKey, $morphType);
-                    break;
-            }
+                }
+                
+                // Polymorphic usually uses 'id' for the local key and 'related_id' for the pivot
+                $foreignKey = $relationData['foreignKey'] ?? 'id';
+                $relatedPivotKey = $relationData['relatedPivotKey'] ?? Str::snake(class_basename($relationData['model'])) . '_id';
+                $morphType = $relationData['morphType'] ?? Str::snake($modelName) . 'able'; // e.g., taggable_type
+                
+                $this->generatePolymorphicPivotMigration($module, $pivotTableName, $modelName, $foreignKey, $relatedPivotKey, $morphType);
+                break;
         }
     }
+}
+
 
     /**
      * Generate the main migration for the model.

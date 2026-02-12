@@ -542,21 +542,31 @@ METHOD;
 
 protected function generateBelongsToManyMethod($relationName, $relationData, $modelName)
 {
-    $relatedModel    = $relationData['model'];
-    $pivotTable      = $relationData['pivotTable'] ?? null;
+    $relatedModel = $relationData['model'];
     
-    // Pivot table keys (Arguments 3 and 4)
+    // 1. Generate the conventional pivot table name if not provided
+    if (isset($relationData['pivotTable'])) {
+        $pivotTable = $relationData['pivotTable'];
+    } else {
+        // Get singular snake_case names for both models
+        $model1 = Str::snake(class_basename($modelName));
+        $model2 = Str::snake(class_basename($relatedModel));
+        
+        // Sort them alphabetically to match Laravel convention
+        $segments = [$model1, $model2];
+        sort($segments);
+        $pivotTable = implode('_', $segments);
+    }
+    
+    // 2. Define the keys (using your supplied data structure)
     $foreignPivotKey = $relationData['foreignPivotKey'] ?? Str::snake(class_basename($modelName)) . '_id';
     $relatedPivotKey = $relationData['relatedPivotKey'] ?? Str::snake(class_basename($relatedModel)) . '_id';
-    
-    // Actual model primary keys (Arguments 5 and 6)
-    // Note: In your data, these are 'foreignKey' and 'relatedKey'
-    $parentKey  = $relationData['foreignKey'] ?? 'id'; 
-    $relatedKey = $relationData['relatedKey'] ?? 'id';
+    $parentKey       = $relationData['foreignKey'] ?? 'id'; 
+    $relatedKey      = $relationData['relatedKey'] ?? 'id';
 
     $args = [
         "\\$relatedModel::class",
-        $pivotTable ? "'$pivotTable'" : "null",
+        "'$pivotTable'",
         "'$foreignPivotKey'",
         "'$relatedPivotKey'",
         "'$parentKey'",
@@ -568,6 +578,7 @@ protected function generateBelongsToManyMethod($relationName, $relationData, $mo
            "        return \$this->belongsToMany(" . implode(', ', $args) . ");\n" .
            "    }";
 }
+
 
 
 
